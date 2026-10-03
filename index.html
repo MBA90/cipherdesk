@@ -451,27 +451,20 @@ function ivCandidates(k,raw){
 
 /* ---------- inspect report ---------- */
 function report(raw,ivInfo){
-  var c=C(),n=raw.length,iv=raw.slice(0,c.iv),ctLen=n-c.iv-c.tag;
-  if(algo==='CBC'&&ivInfo&&!ivInfo.stored){
-    return 'Total: '+n+' bytes\n\n'+
-      'IV: not stored in the data (taken from '+ivInfo.src+')\nHex:    '+toHex(ivInfo.iv)+'\nBase64: '+toB64(ivInfo.iv)+'\n\n'+
-      'Ciphertext  ('+n+' B)  bytes 0-'+(n-1)+'  ('+(n/16)+' blocks)\n\n'+
-      'Padding: PKCS#7, 1 to 16 bytes added before encrypting\n'+
-      'Integrity: none, AES-CBC has no authentication tag';
-  }
-  if(algo==='CBC'){
-    return 'Total: '+n+' bytes\n\n'+
-      'IV  ('+c.iv+' B)  bytes 0-'+(c.iv-1)+'\nHex:    '+toHex(iv)+'\nBase64: '+toB64(iv)+'\n\n'+
-      'Ciphertext  ('+ctLen+' B)  bytes '+c.iv+'-'+(n-1)+'  ('+(ctLen/16)+' blocks)\n\n'+
-      'Padding: PKCS#7, 1 to 16 bytes added before encrypting\n'+
-      'Integrity: none, AES-CBC has no authentication tag';
-  }
-  var tag=raw.slice(n-c.tag),aad=$('aad').value,ti=tsInfo(aad);
+  /* One layout for both algorithms: Total, IV, Ciphertext, Auth tag, AAD. Sections that do not apply say "none". */
+  var c=C(),cbc=algo==='CBC',n=raw.length;
+  var iv=cbc?ivInfo.iv:raw.slice(0,c.iv);
+  var ivLoc=cbc?'not stored in the data (the key is the IV)':'bytes 0-'+(c.iv-1);
+  var start=cbc?0:c.iv,ctLen=n-start-c.tag;
+  var ctLoc=ctLen>0?'bytes '+start+'-'+(n-c.tag-1):'empty';
+  var tag=cbc?'Auth tag  none  (AES-CBC has no authentication tag)\nHex:    none\nBase64: none'
+    :'Auth tag  ('+c.tag+' B)  bytes '+(n-c.tag)+'-'+(n-1)+'\nHex:    '+toHex(raw.slice(n-c.tag))+'\nBase64: '+toB64(raw.slice(n-c.tag));
+  var aad=cbc?'AAD: not used':'AAD: '+($('aad').value||'none set'),ti=cbc?'':tsInfo($('aad').value);
   return 'Total: '+n+' bytes\n\n'+
-    'IV / nonce  ('+c.iv+' B)  bytes 0-'+(c.iv-1)+'\nHex:    '+toHex(iv)+'\nBase64: '+toB64(iv)+'\n\n'+
-    'Ciphertext  ('+ctLen+' B)  '+(ctLen>0?'bytes '+c.iv+'-'+(n-c.tag-1):'empty')+'\n\n'+
-    'Auth tag  ('+c.tag+' B)  bytes '+(n-c.tag)+'-'+(n-1)+'\nHex:    '+toHex(tag)+'\nBase64: '+toB64(tag)+
-    '\n\nAAD: '+(aad||'none set')+(ti?'\nAAD time: '+ti:'');
+    'IV / nonce  ('+iv.length+' B)  '+ivLoc+'\nHex:    '+toHex(iv)+'\nBase64: '+toB64(iv)+'\n\n'+
+    'Ciphertext  ('+ctLen+' B)  '+ctLoc+'\n\n'+
+    tag+'\n\n'+
+    aad+(ti?'\nAAD time: '+ti:'');
 }
 
 var SV='fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';

@@ -37,7 +37,7 @@ const javaEncrypt=(secretB64,text)=>{const key=Buffer.from(secretB64,'base64');c
   const plain='{\n  "id" : 100001,\n  "name" : "\u0645\u062d\u0645\u062f"\n}';
   const e1=await enc(SECRET,plain);const ref=javaEncrypt(SECRET,plain);
   ok(!e1.err&&e1.out===ref,'encrypt output is identical to the reference (AES-128-CBC, IV = key)');
-  ok(Buffer.from(e1.out,'base64').length%16===0&&/not stored in the data \(taken from the key\)/.test($('inspTxt').textContent)&&/Integrity: none/.test($('inspTxt').textContent),'no IV prefix; inspect explains the IV and the missing integrity check');
+  ok(Buffer.from(e1.out,'base64').length%16===0&&/IV \/ nonce  \(16 B\)  not stored in the data \(the key is the IV\)/.test($('inspTxt').textContent)&&/Auth tag  none/.test($('inspTxt').textContent),'no IV prefix; inspect explains the IV and the missing tag');
   ok(/IV not included/.test($('live').textContent),'live size line says IV not included');
   // ---- Node interop (iv = key) ----
   const key=Buffer.from('sample-key-12345');
@@ -84,6 +84,13 @@ const javaEncrypt=(secretB64,text)=>{const key=Buffer.from(secretB64,'base64');c
   $('tE').click();$('data').value='cbc text';$('aGCM').click();ok($('data').value!=='cbc text'&&!$('aadD').hidden&&!$('lay').hidden,'GCM keeps its own inputs; AAD and the Data layout section are back');
   { const g=await enc(SECRET,'gcm again');const gb=await dec(SECRET,g.out);ok(!g.err&&gb.out==='gcm again'&&Buffer.from(g.out,'base64').length===12+9+16,'AES-GCM still works (12-byte IV + data + 16-byte tag)'); }
   $('aCBC').click();ok($('aadD').hidden&&$('lay').hidden,'AAD and the Data layout section are hidden again in AES-CBC');
+  // ---- the Inspect report has the same format for AES-GCM and AES-CBC ----
+  { const shape=()=>$('inspTxt').textContent.split('\n').map(l=>{const m=l.match(/^(AES-128-(?:GCM|CBC)|Total|IV \/ nonce|Ciphertext|Auth tag|Hex:|Base64:|AAD)/);return m?m[1].replace(/^AES-128-.*/,'HEADER'):(l.trim()===''?'':'?')}).join('|');
+    $('aCBC').click();await enc(SECRET,'same format check');const cbcShape=shape();const cbcText=$('inspTxt').textContent;
+    $('aGCM').click();await enc(SECRET,'same format check');const gcmShape=shape();const gcmText=$('inspTxt').textContent;
+    ok(cbcShape===gcmShape&&!/\?/.test(cbcShape),'Inspect report: identical sections, order and labels for AES-GCM and AES-CBC');
+    ok(/^AES-128-CBC, key read as Base64/.test(cbcText)&&/^AES-128-GCM, key read as Base64/.test(gcmText),'both reports start with the same "AES-128-xxx, key read as Base64" line');
+    ok(/AAD: not used/.test(cbcText)&&/AAD: none set/.test(gcmText),'AAD line present in both ("not used" for AES-CBC)'); }
   // ---- Safari-like browser without AES-192 ----
   { const s=make({no192:true});const $$=id=>s.d.getElementById(id);$$('aCBC').click();$$('tE').click();$$('data').value='x';$$('key').value='abcdefghijklmnopqrstuvwx';$$('go').click();await wait(250);
     ok($$('out').classList.contains('err'),'24-byte key in AES-CBC gives a clear error'); }
