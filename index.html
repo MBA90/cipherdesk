@@ -255,11 +255,6 @@ button:focus-visible,summary:focus-visible,.pre:focus-visible{outline:2px solid 
 @media (max-width:640px){.ph:has(.modeseg){flex-wrap:wrap}.modeseg{width:100%;order:5;margin-top:4px}}
 @media (max-width:520px){.brand h1{font-size:18px}.brand p{font-size:12.5px}.brand p .long{display:none}}
 
-/* IV is always the key (AES-CBC) */
-.ivrow{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--sky2);font-size:13px;color:var(--muted)}
-.ivtag{font-weight:700;font-size:12px;letter-spacing:.3px;color:#fff;background:linear-gradient(135deg,#d97706,#f59e0b);border-radius:6px;padding:2px 8px}
-#ivNote{flex:1;min-width:180px}
-.ivrow .kh{white-space:normal}
 .cw{color:var(--jn);font-weight:600}
 
 /* polish 3 */
@@ -324,10 +319,6 @@ button:focus-visible,summary:focus-visible,.pre:focus-visible{outline:2px solid 
     <div class="lrow"><label for="key">Key</label><span class="kh" id="keyHint"></span></div>
     <div class="inwrap"><input id="key" type="password" placeholder="Base64, hex or plain text key" autocomplete="off" autocapitalize="off" spellcheck="false"><button type="button" class="eye" id="showk" aria-label="Show key" title="Show key"></button></div>
     <div class="line" id="keyline"><button type="button" class="lk" id="gen" hidden>Generate a key</button></div>
-  </div>
-
-  <div class="field ivinfo" id="ivbox" hidden>
-    <div class="ivrow"><span class="ivtag">IV</span><span id="ivNote"></span><span class="kh" id="ivHint"></span></div>
   </div>
 
   <details class="field aadD" id="aadD">
@@ -452,18 +443,7 @@ function ivSrc(){return algo==='CBC'?'key':'first'}
 /* Java: new IvParameterSpec(new String(keyBytes, UTF_8).getBytes(UTF_8)). Lossless for valid UTF-8, otherwise the bytes change and the length is no longer 16. */
 function javaIv(keyBytes){return utf8.encode(new TextDecoder('utf-8').decode(keyBytes))}
 var KEY_IV_RULE="AES-CBC here uses the key as the IV (like Java's IvParameterSpec(key)), so the key must be 16 bytes of valid UTF-8 text.";
-function ivHint(){
-  var h=$('ivHint');h.className='kh';h.textContent='';
-  if(algo!=='CBC')return;
-  var v=$('key').value;if(!v)return;
-  try{var kc=keyCandidates(v),ok=kc.some(function(k){return javaIv(k.bytes).length===16}),is16=kc.some(function(k){return k.bytes.length===16});
-    h.textContent=ok?'16-byte IV taken from the key':(is16?'Key is not valid UTF-8 text':'Needs a 16-byte key');h.className='kh '+(ok?'ok':'bad')}catch(e){}
-}
-function ivUI(){
-  $('ivbox').hidden=algo!=='CBC';
-  $('ivNote').textContent='Same as the key (Java style). The IV is not stored in the data.';
-  ivHint();layText();dataHint();
-}
+function ivUI(){layText();dataHint()}
 /* IV candidates for one key (decrypt) */
 function ivCandidates(k,raw){
   if(algo!=='CBC')return [{name:'the first '+C().iv+' bytes of the data',bytes:raw.slice(0,C().iv)}];
@@ -538,8 +518,15 @@ function colorInspect(t){
 function keyHint(){
   var v=$('key').value,h=$('keyHint');
   if(!v){h.textContent='';h.className='kh';return}
-  try{var c=keyCandidates(v)[0];h.textContent='AES-'+c.bytes.length*8+' key, read as '+c.name;h.className='kh ok'}
-  catch(e){h.textContent='Needs 16 or 32 bytes';h.className='kh bad'}
+  try{
+    var kc=keyCandidates(v),c=kc[0];
+    if(algo==='CBC'){
+      var good=kc.filter(function(k){return javaIv(k.bytes).length===16})[0];
+      if(!good){h.textContent=kc.some(function(k){return k.bytes.length===16})?'Key must be valid UTF-8 text':'AES-CBC needs a 16-byte key';h.className='kh bad';return}
+      c=good;
+    }
+    h.textContent='AES-'+c.bytes.length*8+' key, read as '+c.name;h.className='kh ok';
+  }catch(e){h.textContent='Needs 16 or 32 bytes';h.className='kh bad'}
 }
 function dataHint(){
   var E=mode==='E',v=$('data').value,first=algo==='GCM'?'nonce first':(ivSrc()==='first'?'IV first':'no IV in the data'),h=E?'':'Base64 or hex, '+first+'.';
@@ -653,7 +640,7 @@ function decrypt(){
         :'Decryption failed. The key may be wrong, the data may be incomplete or changed, or it was encrypted with an AAD. If it was, open AAD and enter it.');
     }
     var text,label,chips=[{t:'AES-'+res.k.bytes.length*8+'-'+algo},{t:'Key read as '+res.k.name},{t:res.buf.length+' bytes decrypted'}];
-    if(cbc){chips.push({t:'IV: the key'});chips.push({t:'No integrity check, so make sure the text looks right',warn:true})}
+    if(cbc)chips.push({t:'No integrity check, so make sure the text looks right',warn:true});
     try{text=new TextDecoder('utf-8',{fatal:true}).decode(res.buf);label='Decrypted text';try{JSON.parse(text);label='JSON'}catch(e){}}
     catch(e){text=toB64(res.buf);label='Decrypted data (binary, shown as Base64)'}
     setResult({text:text,label:label,chips:chips});
@@ -732,7 +719,7 @@ $('aCBC').onclick=function(){if(algo!=='CBC')setView('CBC',mode)};
 $('go').onclick=run;
 document.addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();run()}});
 $('aad').addEventListener('input',function(){aadBadge(false)});
-$('key').addEventListener('input',function(){keyHint();ivHint()});
+$('key').addEventListener('input',keyHint);
 $('data').addEventListener('input',dataHint);
 $('tsnow').onclick=function(){$('aad').value=nowTs();aadBadge(true);toast('Current time set as AAD')};
 $('showk').onclick=function(){var k=$('key');k.type=k.type==='password'?'text':'password';setEye()};

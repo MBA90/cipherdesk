@@ -26,10 +26,10 @@ const javaEncrypt=(secretB64,text)=>{const key=Buffer.from(secretB64,'base64');c
   const dec=async(secret,b64)=>{$('tD').click();$('data').value=b64;$('key').value=secret;await run();return {err:isErr(),out:out()}};
   const SECRET=Buffer.from('sample-key-12345').toString('base64');
   // ---- interface ----
-  ok($('aGCM').getAttribute('aria-selected')==='true'&&$('ivbox').hidden,'starts on AES-GCM, no IV row');
+  ok($('aGCM').getAttribute('aria-selected')==='true','starts on AES-GCM');
   $('aCBC').click();
-  ok($('aCBC').getAttribute('aria-selected')==='true'&&!$('ivbox').hidden,'AES-CBC shows the fixed IV row');
-  ok(/Same as the key/.test($('ivNote').textContent)&&/not stored in the data/.test($('ivNote').textContent),'IV row says: same as the key, not stored in the data');
+  ok($('aCBC').getAttribute('aria-selected')==='true','AES-CBC tab selected');
+  ok(!d.getElementById('ivbox')&&!/Same as the key \(Java style\)/.test(d.body.textContent),'the IV info row is gone from the page');
   ok(!d.querySelector('select')&&!d.getElementById('ivSeg')&&!d.getElementById('ivCustom'),'no dropdown and no other IV options exist');
   ok($('aadD').hidden,'AAD is hidden in AES-CBC');
   ok($('bTag').hidden&&$('bIv').hidden&&/key as the IV|not stored/.test($('rLit').textContent),'layout panel: no IV segment, no tag');
@@ -43,7 +43,7 @@ const javaEncrypt=(secretB64,text)=>{const key=Buffer.from(secretB64,'base64');c
   const key=Buffer.from('sample-key-12345');
   const dc=nc.createDecipheriv('aes-128-cbc',key,key);ok(Buffer.concat([dc.update(Buffer.from(e1.out,'base64')),dc.final()]).toString('utf8')===plain,"Node's AES-128-CBC (iv = key) decrypts the tool's output");
   const d1=await dec(SECRET,ref);ok(!d1.err&&d1.out===plain,'decrypts Java-style data completely (first block included)');
-  ok(/AES-128-CBC/.test($('meta').textContent)&&/IV: the key/.test($('meta').textContent)&&/no integrity check/i.test($('meta').textContent),'result chips: AES-128-CBC, IV: the key, no integrity check');
+  ok(/AES-128-CBC/.test($('meta').textContent)&&!/IV: the key/.test($('meta').textContent)&&/no integrity check/i.test($('meta').textContent),'result chips: AES-128-CBC and the integrity warning, without the IV chip');
   // cipher given as hex, with line breaks, key with trailing newline
   const hexc=Buffer.from(ref,'base64').toString('hex');
   ok(!(await dec(SECRET,hexc)).isErr&&(await dec(SECRET,hexc)).out===plain,'cipher given as hex');
@@ -68,18 +68,19 @@ const javaEncrypt=(secretB64,text)=>{const key=Buffer.from(secretB64,'base64');c
     const a=await enc(bad,'x'),b=await dec(bad,Buffer.alloc(32,1).toString('base64'));
     ok(jf&&a.err&&/valid UTF-8/.test(a.out)&&/Java would fail/.test(a.out),'16 bytes that are not valid UTF-8: Java fails and the tool explains (encrypt)');
     ok(b.err&&/valid UTF-8/.test(b.out),'same explanation on decrypt');
-    $('tE').click();$('key').value=bad;$('key').dispatchEvent(new w.Event('input'));ok(/not valid UTF-8/.test($('ivHint').textContent)&&$('ivHint').classList.contains('bad'),'IV hint turns red: key is not valid UTF-8');
+    $('tE').click();$('key').value=bad;$('key').dispatchEvent(new w.Event('input'));ok(/valid UTF-8/.test($('keyHint').textContent)&&$('keyHint').classList.contains('bad'),'key hint turns red: key must be valid UTF-8 text');
     const k32=Buffer.from('0123456789abcdef0123456789abcdef').toString('base64');let j2=false;try{javaEncrypt(k32,'x')}catch(e){j2=true}
     const c32=await enc(k32,'x');ok(j2&&c32.err&&/16 bytes/.test(c32.out),'32-byte key: Java fails, the tool explains');
-    $('key').value=SECRET;$('key').dispatchEvent(new w.Event('input'));ok($('ivHint').classList.contains('ok'),'IV hint is green for a good key'); }
+    $('key').value=SECRET;$('key').dispatchEvent(new w.Event('input'));ok($('keyHint').classList.contains('ok')&&/AES-128 key/.test($('keyHint').textContent),'key hint is green for a good key'); }
+  { const k32b=Buffer.from('0123456789abcdef0123456789abcdef').toString('base64');$('key').value=k32b;$('key').dispatchEvent(new w.Event('input'));ok(/16-byte key/.test($('keyHint').textContent)&&$('keyHint').classList.contains('bad'),'key hint says AES-CBC needs a 16-byte key for a 32-byte key');$('key').value=SECRET;$('key').dispatchEvent(new w.Event('input')); }
   // ---- Java-style exception wording ----
   { const other=Buffer.from('fedcba9876543210').toString('base64');const r=await dec(other,ref);ok(r.err&&/BadPaddingException/.test(r.out),'wrong key reports BadPaddingException');
     const r2=await dec(SECRET,Buffer.alloc(20,3).toString('base64'));ok(r2.err&&/IllegalBlockSizeException/.test(r2.out),'bad data length reports IllegalBlockSizeException');
     const r3=await dec(SECRET,'');ok(r3.err,'empty data gives an error'); }
   // ---- separate state per algorithm, GCM unaffected ----
-  $('tE').click();$('data').value='cbc text';$('aGCM').click();ok($('data').value!=='cbc text'&&$('ivbox').hidden&&!$('aadD').hidden,'GCM keeps its own inputs; IV row hidden, AAD back');
+  $('tE').click();$('data').value='cbc text';$('aGCM').click();ok($('data').value!=='cbc text'&&!$('aadD').hidden,'GCM keeps its own inputs; AAD is back');
   { const g=await enc(SECRET,'gcm again');const gb=await dec(SECRET,g.out);ok(!g.err&&gb.out==='gcm again'&&Buffer.from(g.out,'base64').length===12+9+16,'AES-GCM still works (12-byte IV + data + 16-byte tag)'); }
-  $('aCBC').click();ok(!$('ivbox').hidden,'IV row is back after returning to AES-CBC');
+  $('aCBC').click();ok($('aadD').hidden,'AAD is hidden again after returning to AES-CBC');
   // ---- Safari-like browser without AES-192 ----
   { const s=make({no192:true});const $$=id=>s.d.getElementById(id);$$('aCBC').click();$$('tE').click();$$('data').value='x';$$('key').value='abcdefghijklmnopqrstuvwx';$$('go').click();await wait(250);
     ok($$('out').classList.contains('err'),'24-byte key in AES-CBC gives a clear error'); }
