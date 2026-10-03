@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-algo="gcm">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="CipherDesk: encrypt and decrypt text with AES-GCM or AES-CBC. Private by design: everything runs in your browser and nothing is uploaded.">
+<meta name="theme-color" content="#000000" id="themeColor">
+<meta name="color-scheme" content="dark light">
+<script>try{var __t=localStorage.getItem("aes-theme");if(__t)document.documentElement.dataset.theme=__t}catch(e){}</script>
+<title>CipherDesk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231559d6'/%3E%3Cpath d='M32 12l18 7v13c0 10-7 17-18 20-11-3-18-10-18-20V19z' fill='none' stroke='white' stroke-width='4' stroke-linejoin='round'/%3E%3Cpath d='M24 32l6 6 11-12' fill='none' stroke='white' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  color-scheme:light;
+  --hdr-bg:linear-gradient(180deg,#ffffff,#eef4ff);--hdr-line:#dbe6f7;--hdr-text:#0a2a66;--hdr-sub:#5d6b86;--trk:#e6eefb;--trk-line:#d6e2f5;--tab-text:#4a5b7c;--hbtn-bg:#ffffff;--hbtn-line:#d6e2f5;--hbtn-hover:#eef4ff;--hbtn-text:#0a2a66;
+  --iv-t:#b45309;--tag-t:#0b7a5a;--good-t:#0b7a5a;--bg-a:#eaf2ff;--bg-b:#f6f9ff;--glow1:rgba(var(--ac2-rgb),.14);--glow2:rgba(var(--ac-rgb),.07);--card:#fff;--card-line:#e1eaf8;--focus-bg:#fff;--bar:#e8effb;--chip-good:#0b7a5a;--chip-good-bg:#dcf5ec;--chip-bad-bg:#fde7e7;--err-bg:#fff5f5;--err-line:#f5c2c2;--ph-a:#fbfdff;--ph-b:#f4f8ff;--art-a:#fff;--art-b:#e3edff;--sel:#cfe0ff;--scroll:#c3d2ec;--ph:#5f6e8a;--hover:rgba(var(--ac-rgb),.1);--jk:#1d4ba3;--js:#0b7a5a;--jn:#b45309;--jl:#6d4fd8;--cc:#475569;--toast:#0a2a66;--ban1:#0a2a66;--ban2:#1559d6;--ban3:#2f80ed;--shadow:0 1px 2px rgba(10,42,102,.04),0 20px 44px -22px rgba(var(--ac-rgb),.3);
+  --navy:#0a2a66;--blue:#1559d6;--bright:#2f80ed;--sky:#eaf2ff;--sky2:#f4f8ff;--line:#d6e2f5;--line2:#e6eefb;
+  --text:#14213d;--muted:#5d6b86;--bad:#c62828;--good:#0f9d73;
+  --iv:#d97706;--ct:#64748b;--tag:#0f9d73;--aad:#6d4fd8;
+  --ac1:#1559d6;--ac2:#2f80ed;--ac-rgb:21,89,214;--ac2-rgb:47,128,237;
+  --grad:linear-gradient(135deg,var(--ac1) 0%,var(--ac2) 100%);
+  --sans:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  box-sizing:border-box;padding-bottom:env(safe-area-inset-bottom,0px)}
+
+:root[data-algo="cbc"]{--ac1:#6d28d9;--ac2:#8b5cf6;--ac-rgb:109,40,217;--ac2-rgb:139,92,246;--blue:#6d28d9;--bright:#8b5cf6;--navy:#2a1266;--sky:#f0eaff;--sky2:#f8f5ff;--line:#ddd3f4;--line2:#ebe5fa;--card-line:#e7dff8;--bar:#eee8fb;--bg-a:#f1ebff;--bg-b:#faf8ff;--ph-a:#fdfcff;--ph-b:#f8f5ff;--art-b:#e9defd;--sel:#dccbfd;--scroll:#cfc3ea;--hover:rgba(109,40,217,.1);--hdr-bg:linear-gradient(180deg,#ffffff,#f3eeff);--hdr-line:#e2d9f6;--hdr-text:#2a1266;--trk:#ebe5fa;--trk-line:#ddd3f4;--hbtn-line:#ddd3f4;--hbtn-hover:#f3eeff;--hbtn-text:#2a1266;--jk:#5b21b6;--shadow:0 1px 2px rgba(42,18,102,.04),0 20px 44px -22px rgba(var(--ac-rgb),.3);}
+:root[data-theme="dark"]{--navy:#f2f2f2;--blue:#6ea8ff;--bright:#4d94ff;--sky:#111a2b;--sky2:#0a0a0a;--line:#272727;--line2:#1b1b1b;--text:#ededed;--muted:#9b9b9b;--bad:#ff8f8f;--good:#3ddc9d;--iv:#f59e0b;--ct:#8a96a8;--tag:#34d399;--aad:#a78bfa;--iv-t:#f59e0b;--tag-t:#34d399;--good-t:#3ddc9d;--bg-a:#000;--bg-b:#000;--glow1:rgba(var(--ac2-rgb),.1);--glow2:rgba(var(--ac-rgb),.06);--card:#0a0a0a;--card-line:#1f1f1f;--focus-bg:#000;--bar:#141414;--chip-good:#4ade9d;--chip-good-bg:#0b2e22;--chip-bad-bg:#331215;--err-bg:#1f0d0f;--err-line:#5a2327;--ph-a:#0c0c0c;--ph-b:#070707;--art-a:#1a2540;--art-b:#0d1424;--sel:#1f3b73;--scroll:#363636;--ph:#8a8a8a;--hover:rgba(122,167,255,.14);--jk:#8db5ff;--js:#5fe0b0;--jn:#fbbf6a;--jl:#b79bff;--cc:#b0b0b0;--toast:#1c1c1c;--ban1:#000;--hdr-bg:#000;--hdr-line:#1f1f1f;--hdr-text:#f2f2f2;--hdr-sub:#9b9b9b;--trk:#121212;--trk-line:#262626;--tab-text:#a9a9a9;--hbtn-bg:#121212;--hbtn-line:#262626;--hbtn-hover:#1d1d1d;--hbtn-text:#f2f2f2;--ban2:#07122b;--ban3:#0d2a66;--shadow:0 1px 2px rgba(0,0,0,.6),0 22px 46px -24px rgba(0,0,0,.9);color-scheme:dark;}
+:root[data-theme="dark"][data-algo="cbc"]{--ac1:#6d28d9;--ac2:#8b5cf6;--ac-rgb:109,40,217;--ac2-rgb:139,92,246;--blue:#b794ff;--bright:#9d74f7;--sky:#1a1230;--art-a:#2a1b4a;--art-b:#150d2a;--sel:#3b2a73;--hover:rgba(183,148,255,.14);--jk:#c4a8ff;}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:radial-gradient(900px 420px at 88% -8%,var(--glow1),transparent 62%),radial-gradient(700px 380px at 6% 110%,var(--glow2),transparent 60%),linear-gradient(180deg,var(--bg-a) 0,var(--bg-b) 360px,var(--bg-b) 100%) no-repeat,var(--bg-b);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%;min-height:100vh}
+
+/* banner */
+.banner{background:var(--hdr-bg);color:var(--hdr-text);border-bottom:1px solid var(--hdr-line);padding:calc(16px + env(safe-area-inset-top,0px)) 18px 16px;position:relative;overflow:hidden}
+
+.bin{max-width:640px;margin:0 auto;position:relative}
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.logo{width:40px;height:40px;border-radius:12px;background:var(--grad);color:#fff;display:grid;place-items:center;flex:none;box-shadow:0 6px 14px -6px rgba(var(--ac-rgb),.6)}
+.brand h1{font-size:21px;font-weight:650;margin:0;letter-spacing:-.2px}
+.brand p{margin:1px 0 0;font-size:13.5px;color:var(--hdr-sub)}
+.tabs{display:flex;gap:4px;padding:4px;background:var(--trk);border:1px solid var(--trk-line);border-radius:12px}
+.tabs button{flex:1;appearance:none;border:0;background:none;color:var(--tab-text);font:inherit;font-weight:500;padding:10px 8px;border-radius:9px;cursor:pointer}
+.tabs button:hover{color:var(--hdr-text)}
+.tabs button[aria-selected="true"]{color:#fff;font-weight:650}
+.tabs button:focus-visible{outline:2px solid var(--bright);outline-offset:2px}
+
+/* layout */
+main{max-width:640px;margin:16px auto 0;padding:0 14px 48px;position:relative}
+.card{background:var(--card);border:1px solid var(--line2);border-radius:16px;padding:16px;box-shadow:0 1px 2px rgba(10,42,102,.05),0 12px 32px -12px rgba(var(--ac-rgb),.22)}
+#res{margin-top:12px}
+label{display:block;font-size:13.5px;font-weight:600;margin:0 0 4px;color:var(--navy)}
+.opt{font-weight:400;color:var(--muted)}
+.field+.field{margin-top:12px}
+textarea,input[type=text],input[type=password],input:not([type]){width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px;background:var(--sky2);color:var(--text);font:inherit;font-size:16px;min-height:44px}
+textarea{min-height:170px;font-family:var(--mono);font-size:14px;line-height:1.5;resize:vertical}
+input#key,input#aad{font-family:var(--mono);font-size:14px}
+textarea:focus,input:focus{outline:0;border-color:var(--bright);background:var(--focus-bg);box-shadow:0 0 0 3px rgba(var(--ac2-rgb),.2)}
+button:focus-visible,summary:focus-visible,.pre:focus-visible{outline:2px solid var(--bright);outline-offset:2px}
+.line{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:3px;min-height:22px}
+.fh{font-size:12.5px;color:var(--muted)}
+.lk{appearance:none;background:none;border:0;padding:2px 0;font:inherit;font-size:13px;font-weight:500;color:var(--blue);cursor:pointer}
+.lk:hover{text-decoration:underline;text-underline-offset:3px}
+
+/* AAD */
+.aadD>summary{list-style:none;display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--sky2);cursor:pointer;font-size:13.5px;font-weight:600;color:var(--navy)}
+.aadD>summary::-webkit-details-marker{display:none}
+.aadD>summary .at{flex:1}
+.aadD>summary::after{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin:-3px 3px 0 0;transition:transform .15s}
+.aadD[open]>summary::after{transform:rotate(-135deg);margin-top:3px}
+.ab{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--muted);max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ab.on{color:var(--aad)}
+.aadb{padding-top:10px}
+
+/* data layout (Encrypt) */
+.lay{margin-top:12px}
+.lhh{display:flex;justify-content:space-between;align-items:center}
+.lh{font-size:13px;font-weight:600;color:var(--navy)}
+.li{margin-top:6px;padding:10px 12px;border:1px solid var(--line2);border-radius:12px;background:var(--sky2)}
+.lbar{display:flex;gap:2px;height:28px;border-radius:8px;overflow:hidden}
+.lbar i{font-style:normal;font-size:12.5px;font-weight:600;color:#fff;display:flex;align-items:center;justify-content:center;min-width:0}
+.lbar i.iv{background:linear-gradient(135deg,#d97706,#f59e0b);flex:1.2}.lbar i.ct{background:linear-gradient(135deg,#475569,#64748b);flex:3}.lbar i.tg{background:linear-gradient(135deg,#0f9d73,#22b98d);flex:1.2}
+.lbar.sub{height:auto;margin-top:4px;overflow:visible;background:none}
+.lbar.sub span{font-size:11.5px;text-align:center;min-width:0}
+.lbar.sub .iv{flex:1.2;color:var(--iv-t)}.lbar.sub .ct{flex:3;color:var(--muted)}.lbar.sub .tg{flex:1.2;color:var(--tag-t)}
+.lir{margin-top:10px;padding-left:11px;border-left:3px solid var(--line)}
+.lir.iv{border-left-color:var(--iv)}.lir.ct{border-left-color:var(--ct)}.lir.tg{border-left-color:var(--tag)}
+.lir b{display:block;font-size:13px;color:var(--navy)}
+.lir span{display:block;font-size:12.5px}
+.lir p{margin:2px 0 0;font-size:12.5px;color:var(--muted)}
+.lit{margin-top:12px;font-size:12.5px;color:var(--muted)}
+.live{margin-top:8px;font-size:13px;font-weight:600;color:var(--blue);font-family:var(--mono)}
+.live:empty{display:none}
+
+/* action */
+#go{width:100%;margin-top:14px;padding:12px;border:0;border-radius:12px;background:var(--grad);color:#fff;font:inherit;font-weight:650;font-size:16px;cursor:pointer;box-shadow:0 8px 20px -8px rgba(var(--ac-rgb),.65);transition:transform .08s,box-shadow .15s}
+#go:hover{box-shadow:0 10px 24px -8px rgba(var(--ac-rgb),.8)}
+#go:active{transform:translateY(1px)}
+#go:disabled{opacity:.65;cursor:progress}
+
+/* result */
+.chip{font-size:12.5px;font-weight:600;padding:3px 11px;border-radius:999px}
+.chip.good{color:var(--chip-good);background:var(--chip-good-bg)}.chip.bad{color:var(--bad);background:var(--chip-bad-bg)}
+.outwrap{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--sky2)}
+.outwrap.bad{border-color:var(--err-line);background:var(--err-bg)}
+.outwrap.bad .oh{display:none}
+.oh{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:5px 8px 5px 14px;background:var(--bar);border-bottom:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.cin{appearance:none;display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12.5px;font-weight:500;padding:5px 9px;border:0;border-radius:6px;background:transparent;color:var(--muted);cursor:pointer}
+.cin:hover{background:var(--hover);color:var(--blue)}
+.cin.done,.cin.done:hover{color:var(--good-t);background:transparent}
+.cin svg{flex:none}
+.pre{padding:13px 15px;white-space:pre-wrap;word-break:break-word;font-family:var(--mono);font-size:13.5px;line-height:1.55;max-height:360px;overflow:auto;margin:0}
+#out{min-height:150px;cursor:pointer}
+#out.err{min-height:0;cursor:default;font-family:var(--sans);font-size:14.5px}
+#insp{margin-top:12px}
+#insp .pre{font-size:13px;max-height:260px}
+
+
+/* result panel states */
+.placeholder{display:none}
+#res.empty{display:none}
+@media (min-width:960px){
+  .banner{padding:calc(12px + env(safe-area-inset-top,0px)) 28px 12px}
+  .banner::after{display:none}
+  .bin{max-width:1680px;width:100%;display:flex;align-items:center;gap:28px}
+  .brand{margin:0;flex:1}
+  main{max-width:1680px;margin:20px auto 0;padding:0 28px 24px}
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;height:clamp(520px,calc(100vh - 198px),1500px);align-items:stretch}
+  .card{padding:20px}
+  #form{display:flex;flex-direction:column;overflow:auto}
+  #form .inbox{flex:1;min-height:150px}
+  #form .inbox textarea{min-height:90px;resize:none}
+  #res{margin-top:0;display:flex;flex-direction:column;overflow:hidden}
+  #res.empty{display:flex}
+  #res.empty .rbody{display:none}
+  #res:not(.empty) .placeholder{display:none}
+  .placeholder{display:flex;flex:1;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px;color:var(--muted);border:1.5px dashed var(--line);border-radius:14px;padding:20px;background:linear-gradient(180deg,var(--ph-a),var(--ph-b))}
+    .placeholder b{color:var(--navy);font-size:15px}
+  .placeholder span{font-size:13.5px;max-width:300px}
+  #res .rbody{display:flex;flex-direction:column;flex:1;min-height:0}
+  #res .outwrap:not(#insp){flex:1;display:flex;flex-direction:column;min-height:0}
+  #res #out{flex:1;min-height:0;max-height:none}
+  #res .outwrap.bad:not(#insp){flex:none}
+  #res #out.err{flex:none}
+  #insp{flex:none;max-height:44%;display:flex;flex-direction:column;min-height:0}
+  #insp .pre{flex:1;max-height:none;min-height:0}
+}
+
+/* polish */
+::selection{background:var(--sel)}
+*{scrollbar-width:thin;scrollbar-color:var(--scroll) transparent}
+::placeholder{color:var(--ph);opacity:1}
+.ph{display:flex;align-items:center;gap:12px;padding-bottom:14px;margin-bottom:14px;border-bottom:1px solid var(--line2)}
+.ph h2{margin:0;font-size:16.5px;font-weight:650;color:var(--navy);letter-spacing:-.1px}
+.ph p{margin:1px 0 0;font-size:12.5px;color:var(--muted)}
+.ph .chip{margin-left:auto}
+.pi{width:38px;height:38px;border-radius:11px;background:var(--grad);color:#fff;display:grid;place-items:center;flex:none;box-shadow:0 6px 14px -6px rgba(var(--ac-rgb),.6)}
+.pi.alt{background:var(--sky);color:var(--blue);box-shadow:none;border:1px solid var(--line)}
+.inwrap{position:relative}
+.inwrap input{padding-right:46px}
+.eye{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:0;border-radius:8px;background:none;color:var(--muted);display:grid;place-items:center;cursor:pointer}
+.eye:hover{background:var(--hover);color:var(--blue)}
+#go{display:flex;align-items:center;justify-content:center;gap:9px}
+#go .bi{display:grid;place-items:center}
+.chip::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;margin-right:7px;vertical-align:1px}
+.art{width:68px;height:68px;border-radius:50%;background:radial-gradient(circle at 30% 25%,var(--art-a),var(--art-b));border:1px solid var(--line);display:grid;place-items:center;color:var(--blue);box-shadow:0 10px 24px -12px rgba(var(--ac-rgb),.5),0 0 0 8px rgba(var(--ac2-rgb),.06);margin-bottom:10px}
+.card{border-color:var(--card-line);box-shadow:var(--shadow)}
+.tabs button{transition:background .15s,color .15s}
+
+
+/* input box shares the output box look */
+.inbox{display:flex;flex-direction:column;overflow:hidden}
+.inbox:focus-within{border-color:var(--bright);background:var(--focus-bg);box-shadow:0 0 0 3px rgba(var(--ac2-rgb),.2)}
+.inbox textarea{flex:1;border:0;border-radius:0;background:transparent;box-shadow:none;min-height:170px;resize:vertical;padding:12px 14px}
+.inbox textarea:focus{box-shadow:none;background:transparent}
+.inbox .oh label{margin:0;font-size:12.5px;font-weight:500;color:var(--muted)}
+.ohr{display:flex;align-items:center;gap:14px}
+.ohr .fh{font-size:12px}
+.oh{min-height:38px}
+.llow{margin-top:12px}
+.rlow{display:block}
+.rlow #meta{margin-top:8px}
+/* polish 2 */
+
+.tabs{position:relative}
+.tabs .ind{position:absolute;top:4px;bottom:4px;left:4px;width:calc(50% - 6px);background:var(--grad);border-radius:9px;box-shadow:0 6px 14px -6px rgba(var(--ac-rgb),.65);transition:transform .24s cubic-bezier(.4,0,.2,1)}
+.tabs[data-pos="1"] .ind{transform:translateX(calc(100% + 4px))}
+.tabs button{position:relative;z-index:1}
+.tabs button[aria-selected="true"]{background:none!important;box-shadow:none!important;color:#fff}
+.lrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.kh{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kh.ok{color:var(--good-t)}.kh.ok::before{content:"\2713\00a0"}
+.kh.bad{color:var(--bad)}
+.jk{color:var(--jk)}.js{color:var(--js)}.jn{color:var(--jn)}.jl{color:var(--jl)}
+.ci{color:var(--iv-t);font-weight:600}.cc{color:var(--cc);font-weight:600}.ct2{color:var(--tag-t);font-weight:600}.ca{color:var(--aad);font-weight:600}
+.rbody.pop{animation:rise .24s cubic-bezier(.2,.7,.2,1)}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.toast{display:flex;align-items:center;gap:8px;box-shadow:0 10px 28px -10px rgba(10,42,102,.55)}
+.toast svg{color:#7ee0bd;flex:none}
+@media (prefers-reduced-motion:reduce){.rbody.pop{animation:none}.tabs .ind{transition:none}}
+
+/* aligned rows: input box and output box share the same top and bottom */
+@media (min-width:960px){
+  @supports (grid-template-rows:subgrid){
+    .grid{grid-template-rows:auto minmax(0,1fr) auto;row-gap:0}
+    #form,#res{display:grid;grid-row:1 / span 3;grid-template-rows:subgrid;overflow:hidden}
+    #form .inbox{flex:none;min-height:0}
+    #form .inbox textarea{min-height:0;flex:1;resize:none}
+    #form .llow{margin-top:14px}
+    #res .rbody{display:contents}
+    #res .outwrap:not(#insp){min-height:0}
+    #res #wrapOut{grid-row:2;display:flex;flex-direction:column;min-height:0}
+    #res .rlow{grid-row:3;margin-top:12px;min-height:0}
+    #res.empty .placeholder{grid-row:2 / span 2;margin-bottom:0}
+    #res #wrapOut.bad{align-self:start}
+    #res .rlow{position:relative}
+    #insp{position:absolute;inset:0;margin:0;max-height:none;display:flex;flex-direction:column}
+    #insp .pre{flex:1;max-height:none;min-height:0}
+  }
+}
+
+/* small-screen header fixes */
+.chip,.lk,.inbox .oh label,.cin{white-space:nowrap}
+@media (max-width:520px){
+  .ohr .fh{display:none}
+  .ph .chip{align-self:flex-start;margin-top:4px}
+}
+
+/* algorithm switch */
+@media (min-width:960px){.bin{gap:18px}}
+
+/* algorithm tabs above the cards */
+.algbar{display:flex;gap:10px;margin:0 0 14px}
+.algbar button{position:relative;overflow:hidden;flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;padding:9px 18px;border:1px solid var(--card-line);border-radius:14px;background:var(--card);font:inherit;cursor:pointer;color:var(--muted);transition:border-color .15s,box-shadow .15s}
+.algbar button b{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:650;color:var(--muted)}
+.algbar button b::before{content:"";flex:none;width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,var(--tc1),var(--tc2));box-shadow:0 0 0 3px rgba(var(--tcr),.18)}
+#aGCM{--tc1:#1559d6;--tc2:#2f80ed;--tcb:#2f80ed;--tcr:47,128,237}
+#aCBC{--tc1:#6d28d9;--tc2:#8b5cf6;--tcb:#8b5cf6;--tcr:139,92,246}
+:root[data-theme="dark"] #aGCM{--tcb:#4d94ff}
+:root[data-theme="dark"] #aCBC{--tcb:#a78bfa}
+.algbar button span{font-size:12.5px;color:var(--muted)}
+.algbar button::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--tc1),var(--tc2));opacity:0;transition:opacity .15s}
+.algbar button:hover{border-color:var(--tcb)}
+.algbar button[aria-selected="true"]{border-color:var(--tcb);box-shadow:0 0 0 2px rgba(var(--tcr),.24),0 10px 24px -14px rgba(var(--tcr),.55)}
+.algbar button[aria-selected="true"]::before{opacity:1}
+.algbar button[aria-selected="true"] b{color:var(--navy)}
+.algbar button:focus-visible{outline:2px solid var(--bright);outline-offset:2px}
+@media (max-width:520px){.algbar button span{display:none}.algbar button{padding:10px 14px}}
+/* Encrypt / Decrypt control inside the panel header */
+.modeseg{margin-left:auto;width:220px;flex:none}
+.modeseg button{padding:7px 8px;font-size:13.5px}
+@media (max-width:640px){.ph:has(.modeseg){flex-wrap:wrap}.modeseg{width:100%;order:5;margin-top:4px}}
+@media (max-width:520px){.brand h1{font-size:18px}.brand p{font-size:12.5px}.brand p .long{display:none}}
+
+/* IV is always the key (AES-CBC) */
+.ivrow{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--sky2);font-size:13px;color:var(--muted)}
+.ivtag{font-weight:700;font-size:12px;letter-spacing:.3px;color:#fff;background:linear-gradient(135deg,#d97706,#f59e0b);border-radius:6px;padding:2px 8px}
+#ivNote{flex:1;min-width:180px}
+.ivrow .kh{white-space:normal}
+.cw{color:var(--jn);font-weight:600}
+
+/* polish 3 */
+#out.err{display:flex;gap:10px;align-items:flex-start;color:var(--text)}
+#out.err b{color:var(--bad);font-weight:650}
+.eic{color:var(--bad);flex:none;margin-top:1px;display:grid}
+#meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;font-size:12px}
+#meta:empty{display:none}
+.mc{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;background:var(--sky);border:1px solid var(--line);color:var(--muted);font-size:12px;line-height:1.4}
+.mc.warn{color:var(--jn);background:rgba(217,119,6,.1);border-color:rgba(217,119,6,.35)}
+#go{position:relative}
+#go::after{content:attr(data-kbd);position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;letter-spacing:.2px}
+@media (max-width:700px),(hover:none){#go::after{display:none}}
+.themeBtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--hbtn-line);background:var(--hbtn-bg);color:var(--hbtn-text);display:grid;place-items:center;cursor:pointer;flex:none}
+.themeBtn:hover{background:var(--hbtn-hover)}
+.themeBtn:focus-visible{outline:2px solid var(--bright);outline-offset:2px}
+.bin{position:relative}
+@media (max-width:959px){.themeBtn{position:absolute;top:0;right:0}.brand{padding-right:52px}}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--toast);color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;font-weight:500;opacity:0;pointer-events:none;transition:opacity .15s;z-index:9}
+.toast.on{opacity:1}
+.fatal{margin:0 0 12px;padding:12px 14px;border:1px solid var(--err-line);border-radius:10px;background:var(--err-bg);color:var(--bad);font-size:14px}
+@media (min-width:1500px){textarea{font-size:15px}.pre{font-size:14.5px}#insp .pre{font-size:13.5px}}
+@media (prefers-reduced-motion:reduce){.toast,#go,.aadD>summary::after{transition:none}}
+@media (max-width:520px){main{padding:0 12px 40px}}
+</style>
+</head>
+<body>
+
+<header class="banner"><div class="bin">
+  <div class="brand">
+    <div class="logo" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></div>
+    <div><h1>CipherDesk</h1><p><span class="long">Encrypt and decrypt with AES-GCM or AES-CBC. </span>Private by design: nothing leaves your browser.</p></div>
+  </div>
+  <button type="button" class="themeBtn" id="themeBtn" aria-label="Switch theme" title="Switch theme"></button>
+</div></header>
+
+<main>
+<noscript><p class="fatal">This tool needs JavaScript to run.</p></noscript>
+<p class="fatal" id="fatal" hidden>This browser can't run encryption here. Use a current version of Chrome, Edge, Firefox or Safari, and open the page over HTTPS.</p>
+
+<nav class="algbar" id="algbar" role="tablist" aria-label="Algorithm">
+  <button type="button" role="tab" id="aGCM" aria-selected="true" aria-controls="form"><b>AES-GCM</b><span>Authenticated, recommended</span></button>
+  <button type="button" role="tab" id="aCBC" aria-selected="false" aria-controls="form" tabindex="-1"><b>AES-CBC</b><span>Classic, no integrity check</span></button>
+</nav>
+<div class="grid">
+<section class="card" id="form" role="tabpanel">
+  <div class="ph"><span class="pi" id="fIcon"></span><div><h2 id="fTitle"><span id="fVerb">Decrypt</span></h2><p id="fSub">Turn encrypted data back into text.</p></div>
+    <div class="tabs modeseg" id="tabs" role="tablist" aria-label="Action" data-pos="1">
+        <span class="ind" id="ind" aria-hidden="true"></span>
+        <button type="button" role="tab" id="tE" aria-selected="false" aria-controls="form">Encrypt</button>
+        <button type="button" role="tab" id="tD" aria-selected="true" aria-controls="form">Decrypt</button>
+      </div>
+  </div>
+
+  <div class="outwrap inbox">
+    <div class="oh"><label for="data" id="dl">Encrypted data</label><span class="ohr"><span class="fh" id="dhint"></span><button type="button" class="lk" id="clr">Clear all</button></span></div>
+    <textarea id="data" spellcheck="false" autocomplete="off"></textarea>
+  </div>
+
+  <div class="llow">
+  <div class="field">
+    <div class="lrow"><label for="key">Key</label><span class="kh" id="keyHint"></span></div>
+    <div class="inwrap"><input id="key" type="password" placeholder="Base64, hex or plain text key" autocomplete="off" autocapitalize="off" spellcheck="false"><button type="button" class="eye" id="showk" aria-label="Show key" title="Show key"></button></div>
+    <div class="line" id="keyline"><button type="button" class="lk" id="gen" hidden>Generate a key</button></div>
+  </div>
+
+  <div class="field ivinfo" id="ivbox" hidden>
+    <div class="ivrow"><span class="ivtag">IV</span><span id="ivNote"></span><span class="kh" id="ivHint"></span></div>
+  </div>
+
+  <details class="field aadD" id="aadD">
+    <summary><span class="at">AAD <span class="opt">(optional)</span></span><span class="ab" id="aadBadge">Not set</span></summary>
+    <div class="aadb">
+      <input id="aad" aria-label="AAD" placeholder="Leave empty if unused" spellcheck="false" autocomplete="off">
+      <div class="line"><span class="fh">Must match exactly when decrypting.</span><button type="button" class="lk" id="tsnow">Use current time</button></div>
+    </div>
+  </details>
+
+  <div class="lay" id="lay" hidden>
+    <div class="lhh"><span class="lh">Data layout</span><button type="button" class="lk" id="layMore" aria-expanded="false">Show details</button></div>
+    <div class="li">
+      <div class="lbar"><i class="iv" id="bIv">IV</i><i class="ct">Ciphertext</i><i class="tg" id="bTag">Tag</i></div>
+      <div id="liMore" hidden>
+        <div class="lbar sub"><span class="iv" id="sIv">12 bytes</span><span class="ct" id="sCt">same size as your data</span><span class="tg" id="sTag">16 bytes</span></div>
+        <div class="lir iv" id="rIv"><b>Nonce (IV)</b><span id="rIvS">12 bytes. 16 Base64 characters or 24 hex characters.</span><p>A random value created for every encryption. It is not secret, but it is needed to decrypt.</p></div>
+        <div class="lir ct"><b>Ciphertext</b><span id="rCtS">Same length as the original data.</span><p id="rCtP">Your data, encrypted.</p></div>
+        <div class="lir tg" id="rTag"><b>Authentication tag</b><span>16 bytes. 24 Base64 characters or 32 hex characters.</span><p>An integrity check. Decryption fails if the key, the data or the AAD is different.</p></div>
+        <div class="lit" id="rLit">Total size = 12 + data size + 16 bytes, so encryption adds 28 bytes.</div>
+      </div>
+      <div class="live" id="live"></div>
+    </div>
+  </div>
+
+  <button type="button" id="go"><span class="bi" id="goI"></span><span id="goT">Decrypt</span></button>
+  </div>
+</section>
+
+<section class="card empty" id="res" aria-live="polite">
+  <div class="ph"><span class="pi alt"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg></span><div><h2>Result</h2><p id="rSub">Your output and details appear here.</p></div><span id="status" class="chip good" hidden>Completed</span></div>
+  <div class="placeholder" id="ph">
+    <span class="art" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
+    <b id="phT">Your result will appear here</b>
+    <span id="phS">Enter your data and key, then choose an action.</span>
+  </div>
+  <div class="rbody">
+    <div class="outwrap" id="wrapOut">
+      <div class="oh"><span id="olabel">Result</span><button type="button" class="cin" id="copyIn"></button></div>
+      <div class="pre" id="out" tabindex="0" role="region" aria-label="Result text"></div>
+    </div>
+    <div class="rlow">
+      <div id="meta"></div>
+      <div class="outwrap" id="insp" hidden>
+        <div class="oh"><span>Inspect</span></div>
+        <div class="pre" id="inspTxt" tabindex="0" role="region" aria-label="Inspect report"></div>
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+</main>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+'use strict';
+var $=function(id){return document.getElementById(id)};
+
+/* ---------- helpers ---------- */
+var algo='GCM';
+function C(){return algo==='GCM'?{iv:12,tag:16,min:28,alg:'AES-GCM'}:{iv:16,tag:0,min:32,alg:'AES-CBC'}}
+var utf8=new TextEncoder();
+function cat(){var n=0,i;for(i=0;i<arguments.length;i++)n+=arguments[i].length;var o=new Uint8Array(n),p=0;for(i=0;i<arguments.length;i++){o.set(arguments[i],p);p+=arguments[i].length}return o}
+function toHex(u){return Array.prototype.map.call(u,function(x){return x.toString(16).padStart(2,'0')}).join('')}
+function toB64(u){var s='';for(var i=0;i<u.length;i++)s+=String.fromCharCode(u[i]);return btoa(s)}
+function fromB64(s){var b=atob(s.replace(/\s+/g,'').replace(/-/g,'+').replace(/_/g,'/'));var u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u}
+function fromHex(s){s=s.replace(/\s+/g,'').replace(/^0x/i,'');if(s.length%2||/[^0-9a-f]/i.test(s))throw new Error('bad hex');var u=new Uint8Array(s.length/2);for(var i=0;i<u.length;i++)u[i]=parseInt(s.substr(i*2,2),16);return u}
+function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+
+function parseCipher(str){
+  var t=str.replace(/\s+/g,'');
+  if(!t)throw new Error('Paste the encrypted data.');
+  if(/^[0-9a-fA-F]+$/.test(t)&&t.length%2===0)return fromHex(t);
+  if(!/^[A-Za-z0-9+\/_-]+={0,2}$/.test(t))throw new Error("The data isn't valid Base64. Check that you copied all of it.");
+  try{return fromB64(t)}catch(e){throw new Error("The data isn't valid Base64. Check that you copied all of it.")}
+}
+function keyCandidates(str){
+  if(!str)throw new Error('Enter a key.');
+  var list=[],seen={};
+  var t=str.trim(),allHex=/^[0-9a-fA-F]+$/.test(t);
+  function add(name,fn,prio){
+    try{var b=fn(),n=b.length;if(n===16||n===24||n===32){
+      var id=toHex(b);if(seen[id])return;seen[id]=1;
+      list.push({name:name,bytes:b,p:prio(n)});
+    }}catch(e){}
+  }
+  /* priority: most likely reading first. AES-192 readings are the least likely. */
+  add('hex',function(){return fromHex(t)},function(n){return n===24?3:0});
+  add('Base64',function(){return fromB64(t)},function(n){return n===24?3:(allHex?2:1)});
+  add('plain text',function(){return utf8.encode(str)},function(n){return n===24?4:2});
+  add('plain text',function(){return utf8.encode(t)},function(n){return n===24?4:2});
+  if(!list.length)throw new Error('The key must be 16, 24 or 32 bytes long, as Base64, hex or plain text.');
+  list.sort(function(a,b){return a.p-b.p});
+  return list;
+}
+function nowTs(){return String(Math.floor(Date.now()/1000))}
+function tsInfo(a){
+  var d=null;
+  if(/^\d{10}$/.test(a))d=new Date(+a*1000);
+  else if(/^\d{13}$/.test(a))d=new Date(+a);
+  else if(/^\d{4}-\d\d-\d\dT/.test(a)){var t=Date.parse(a);if(!isNaN(t))d=new Date(t)}
+  return d&&!isNaN(d)?d.toISOString()+'  (local: '+d.toLocaleString()+')':'';
+}
+function params(iv,aad){
+  if(algo==='CBC')return {name:'AES-CBC',iv:iv};
+  var p={name:'AES-GCM',iv:iv,tagLength:C().tag*8};if(aad)p.additionalData=utf8.encode(aad);return p;
+}
+function importKey(cands,usage){
+  var alg=C().alg;
+  return cands.reduce(function(chain,k){
+    return chain.then(function(found){
+      if(found)return found;
+      return crypto.subtle.importKey('raw',k.bytes,alg,false,[usage]).then(function(key){return {key:key,k:k}},function(){return null});
+    });
+  },Promise.resolve(null));
+}
+var NO192='This browser does not support AES-192 keys. Use a 16 or 32 byte key.';
+
+/* ---------- IV (AES-CBC): always the key, like Java's IvParameterSpec(key) ---------- */
+function ivSrc(){return algo==='CBC'?'key':'first'}
+/* Java: new IvParameterSpec(new String(keyBytes, UTF_8).getBytes(UTF_8)). Lossless for valid UTF-8, otherwise the bytes change and the length is no longer 16. */
+function javaIv(keyBytes){return utf8.encode(new TextDecoder('utf-8').decode(keyBytes))}
+var KEY_IV_RULE="AES-CBC here uses the key as the IV (like Java's IvParameterSpec(key)), so the key must be 16 bytes of valid UTF-8 text.";
+function ivHint(){
+  var h=$('ivHint');h.className='kh';h.textContent='';
+  if(algo!=='CBC')return;
+  var v=$('key').value;if(!v)return;
+  try{var kc=keyCandidates(v),ok=kc.some(function(k){return javaIv(k.bytes).length===16}),is16=kc.some(function(k){return k.bytes.length===16});
+    h.textContent=ok?'16-byte IV taken from the key':(is16?'Key is not valid UTF-8 text':'Needs a 16-byte key');h.className='kh '+(ok?'ok':'bad')}catch(e){}
+}
+function ivUI(){
+  $('ivbox').hidden=algo!=='CBC';
+  $('ivNote').textContent='Same as the key (Java style). The IV is not stored in the data.';
+  ivHint();layText();dataHint();
+}
+/* IV candidates for one key (decrypt) */
+function ivCandidates(k,raw){
+  if(algo!=='CBC')return [{name:'the first '+C().iv+' bytes of the data',bytes:raw.slice(0,C().iv)}];
+  var jv=javaIv(k.bytes);return jv.length===16?[{name:'the key',bytes:jv}]:[];
+}
+
+/* ---------- inspect report ---------- */
+function report(raw,ivInfo){
+  var c=C(),n=raw.length,iv=raw.slice(0,c.iv),ctLen=n-c.iv-c.tag;
+  if(algo==='CBC'&&ivInfo&&!ivInfo.stored){
+    return 'Total: '+n+' bytes\n\n'+
+      'IV: not stored in the data (taken from '+ivInfo.src+')\nHex:    '+toHex(ivInfo.iv)+'\nBase64: '+toB64(ivInfo.iv)+'\n\n'+
+      'Ciphertext  ('+n+' B)  bytes 0-'+(n-1)+'  ('+(n/16)+' blocks)\n\n'+
+      'Padding: PKCS#7, 1 to 16 bytes added before encrypting\n'+
+      'Integrity: none, AES-CBC has no authentication tag';
+  }
+  if(algo==='CBC'){
+    return 'Total: '+n+' bytes\n\n'+
+      'IV  ('+c.iv+' B)  bytes 0-'+(c.iv-1)+'\nHex:    '+toHex(iv)+'\nBase64: '+toB64(iv)+'\n\n'+
+      'Ciphertext  ('+ctLen+' B)  bytes '+c.iv+'-'+(n-1)+'  ('+(ctLen/16)+' blocks)\n\n'+
+      'Padding: PKCS#7, 1 to 16 bytes added before encrypting\n'+
+      'Integrity: none, AES-CBC has no authentication tag';
+  }
+  var tag=raw.slice(n-c.tag),aad=$('aad').value,ti=tsInfo(aad);
+  return 'Total: '+n+' bytes\n\n'+
+    'IV / nonce  ('+c.iv+' B)  bytes 0-'+(c.iv-1)+'\nHex:    '+toHex(iv)+'\nBase64: '+toB64(iv)+'\n\n'+
+    'Ciphertext  ('+ctLen+' B)  '+(ctLen>0?'bytes '+c.iv+'-'+(n-c.tag-1):'empty')+'\n\n'+
+    'Auth tag  ('+c.tag+' B)  bytes '+(n-c.tag)+'-'+(n-1)+'\nHex:    '+toHex(tag)+'\nBase64: '+toB64(tag)+
+    '\n\nAAD: '+(aad||'none set')+(ti?'\nAAD time: '+ti:'');
+}
+
+var SV='fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
+var ICON={
+  lock:'<svg width="18" height="18" viewBox="0 0 24 24" '+SV+'><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',
+  unlock:'<svg width="18" height="18" viewBox="0 0 24 24" '+SV+'><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.5-2"/></svg>',
+  sun:'<svg width="18" height="18" viewBox="0 0 24 24" '+SV+'><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+  moon:'<svg width="18" height="18" viewBox="0 0 24 24" '+SV+'><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>',
+  alert:'<svg width="18" height="18" viewBox="0 0 24 24" '+SV+'><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/></svg>',
+  eye:'<svg width="18" height="18" viewBox="0 0 24 24" '+SV+'><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  eyeoff:'<svg width="18" height="18" viewBox="0 0 24 24" '+SV+'><path d="M3 3l18 18"/><path d="M10.6 5.1A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17 17 0 0 0 2 12s3.6 7 10 7a10.5 10.5 0 0 0 4.4-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>'
+};
+function setEye(){var shown=$('key').type==='text';$('showk').innerHTML=shown?ICON.eyeoff:ICON.eye;$('showk').setAttribute('aria-label',shown?'Hide key':'Show key');$('showk').title=shown?'Hide key':'Show key'}
+
+
+/* ---------- favicon follows the algorithm colour ---------- */
+function setFavicon(){
+  var c=algo==='GCM'?'#1559d6':'#6d28d9',l=document.querySelector('link[rel="icon"]');
+  if(!l)return;
+  l.href='data:image/svg+xml,'+encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='"+c+"'/><path d='M32 12l18 7v13c0 10-7 17-18 20-11-3-18-10-18-20V19z' fill='none' stroke='white' stroke-width='4' stroke-linejoin='round'/><path d='M24 32l6 6 11-12' fill='none' stroke='white' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+}
+
+/* ---------- theme ---------- */
+function effTheme(){return document.documentElement.dataset.theme==='light'?'light':'dark'}
+function themeIcon(){var d=effTheme()==='dark';var tc=document.getElementById('themeColor');if(tc)tc.setAttribute('content',d?'#000000':'#f4f8ff');$('themeBtn').innerHTML=d?ICON.sun:ICON.moon;$('themeBtn').setAttribute('aria-label',d?'Switch to light theme':'Switch to dark theme');$('themeBtn').title=d?'Switch to light theme':'Switch to dark theme'}
+
+/* ---------- display helpers ---------- */
+function errHTML(t){
+  var i=t.search(/[.!?](\s|$)/),title=i>-1?t.slice(0,i+1):t,rest=i>-1?t.slice(i+1).trim():'';
+  return '<span class="eic">'+ICON.alert+'</span><div><b>'+esc(title)+'</b>'+(rest?' '+esc(rest):'')+'</div>';
+}
+function highlightJSON(text){
+  if(text.length>300000)return esc(text);
+  return esc(text).replace(/("(?:\\.|[^\\"])*")(\s*:)?|\b(true|false|null)\b|-?\b\d+(?:\.\d+)?(?:[eE][+\-]?\d+)?\b/g,function(m,str,colon,lit){
+    if(str)return colon?'<span class="jk">'+str+'</span>'+colon:'<span class="js">'+str+'</span>';
+    if(lit)return '<span class="jl">'+m+'</span>';
+    return '<span class="jn">'+m+'</span>';
+  });
+}
+function colorInspect(t){
+  return esc(t).replace(/^(IV.*)$/m,'<span class="ci">$1</span>').replace(/^(Ciphertext.*)$/m,'<span class="cc">$1</span>').replace(/^(Auth tag.*)$/m,'<span class="ct2">$1</span>').replace(/^(AAD(?: time)?:.*)$/gm,'<span class="ca">$1</span>').replace(/^(Integrity:.*)$/m,'<span class="cw">$1</span>');
+}
+function keyHint(){
+  var v=$('key').value,h=$('keyHint');
+  if(!v){h.textContent='';h.className='kh';return}
+  try{var c=keyCandidates(v)[0];h.textContent='AES-'+c.bytes.length*8+' key, read as '+c.name;h.className='kh ok'}
+  catch(e){h.textContent='Needs 16 or 32 bytes';h.className='kh bad'}
+}
+function dataHint(){
+  var E=mode==='E',v=$('data').value,first=algo==='GCM'?'nonce first':(ivSrc()==='first'?'IV first':'no IV in the data'),h=E?'':'Base64 or hex, '+first+'.';
+  if(v){
+    if(E)h=v.length+' characters, '+utf8.encode(v).length+' bytes';
+    else{try{h=parseCipher(v).length+' bytes, '+first}catch(e){}}
+  }
+  $('dhint').textContent=h;
+}
+
+/* ---------- state ---------- */
+var mode='D',FIELDS=['data','key','aad'];
+var store={},resStore={};
+function RK(){return algo+mode}
+
+function aadBadge(open){
+  var v=$('aad').value,b=$('aadBadge');
+  b.textContent=v?(v.length>26?v.slice(0,26)+'\u2026':v):'Not set';
+  b.classList.toggle('on',!!v);
+  if(open&&v)$('aadD').open=true;
+}
+function toast(t){var e=$('toast');e.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" '+SV+'><path d="M20 6L9 17l-5-5"/></svg><span></span>';e.lastChild.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(function(){e.classList.remove('on')},1700)}
+
+/* copy */
+var IC_COPY='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>';
+var IC_OK='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>';
+var copyT;
+function copyBtn(done){var c=$('copyIn');c.innerHTML=(done?IC_OK:IC_COPY)+'<span>'+(done?'Copied':'Copy')+'</span>';c.classList.toggle('done',done)}
+function copyOut(){
+  var r=resStore[RK()];if(!r||r.err)return;
+  var done=function(){toast('Copied to clipboard');copyBtn(true);clearTimeout(copyT);copyT=setTimeout(function(){copyBtn(false)},1800)};
+  var fallback=function(){
+    try{var t=document.createElement('textarea');t.value=r.text;t.setAttribute('readonly','');t.style.cssText='position:fixed;opacity:0;top:0';document.body.appendChild(t);t.select();t.setSelectionRange(0,1e9);var ok=document.execCommand('copy');t.remove();
+      if(ok)done();else toast('Select the text and copy it')}catch(e){toast('Select the text and copy it')}
+  };
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(r.text).then(done,fallback);else fallback();
+}
+
+/* render result */
+function render(r){
+  $('res').classList.toggle('empty',!r);
+  $('status').hidden=!r;
+  $('live').textContent=(r&&r.live)||'';
+  if(!r)return;
+  $('status').textContent=r.err?'Failed':'Completed';
+  $('status').className='chip '+(r.err?'bad':'good');
+  $('wrapOut').classList.toggle('bad',!!r.err);
+  $('out').className='pre'+(r.err?' err':'');
+  if(r.err)$('out').innerHTML=errHTML(r.text);else if(r.label==='JSON')$('out').innerHTML=highlightJSON(r.text);else $('out').textContent=r.text;
+  $('olabel').textContent=r.label||'Result';
+  $('copyIn').hidden=!!r.err;
+  $('meta').innerHTML=(r.chips||[]).map(function(c){return '<span class="mc'+(c.warn?' warn':'')+'">'+esc(c.t)+'</span>'}).join('');
+  $('insp').hidden=!r.insp;
+  $('inspTxt').innerHTML=r.insp?colorInspect(r.insp):'';
+  copyBtn(false);
+}
+function setResult(r){resStore[RK()]=r;render(r);
+  var rb=document.querySelector('#res .rbody');rb.classList.remove('pop');void rb.offsetWidth;rb.classList.add('pop');
+  if(r&&window.matchMedia('(max-width: 959px)').matches&&$('res').scrollIntoView){try{$('res').scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'nearest'})}catch(e){}}}
+function fail(msg){setResult({err:true,text:msg})}
+
+/* ---------- actions ---------- */
+function encrypt(){
+  var data=$('data').value;
+  if(!data)return Promise.reject(new Error('Enter the text to encrypt.'));
+  var c=C(),cands=keyCandidates($('key').value),aad=algo==='GCM'?$('aad').value:'',cbc=algo==='CBC';
+  return importKey(cands,'encrypt').then(function(f){
+    if(!f)throw new Error(NO192);
+    var iv,ivInfo=null;
+    if(cbc){
+      iv=javaIv(f.k.bytes);
+      if(iv.length!==16)throw new Error(KEY_IV_RULE+' Your key gives an IV of '+iv.length+' bytes, and Java would fail here too (Wrong IV length: must be 16 bytes long).');
+      ivInfo={stored:false,src:'the key',iv:iv};
+    }else{iv=crypto.getRandomValues(new Uint8Array(c.iv))}
+    return crypto.subtle.encrypt(params(iv,aad),f.key,utf8.encode(data)).then(function(buf){
+      var body=new Uint8Array(buf),combined=cbc?body:cat(iv,body),ctLen=cbc?combined.length:combined.length-c.iv-c.tag;
+      setResult({text:toB64(combined),label:'Encrypted data (Base64)',
+        insp:'AES-'+f.k.bytes.length*8+'-'+algo+', key read as '+f.k.name+'\n\n'+report(combined,ivInfo),
+        live:cbc?'Your data: '+ctLen+' bytes (IV not included)':'Your data: '+c.iv+' + '+ctLen+' + '+c.tag+' = '+combined.length+' bytes'});
+    });
+  });
+}
+function decrypt(){
+  var c=C(),raw=parseCipher($('data').value),cbc=algo==='CBC';
+  if(!cbc&&raw.length<c.min)return Promise.reject(new Error('The data is too short to be AES-GCM output. It needs at least '+c.min+' bytes, and this has '+raw.length+'.'));
+  if(cbc&&(raw.length<16||raw.length%16!==0))return Promise.reject(new Error('This is not valid AES-CBC data. Its length must be a multiple of 16 bytes (Java: IllegalBlockSizeException), and this has '+raw.length+' bytes. Check that all of it was pasted.'));
+  var cands=keyCandidates($('key').value),aad=cbc?'':$('aad').value;
+  var usable=0,triedIv=0;
+  return cands.reduce(function(chain,k){
+    return chain.then(function(res){
+      if(res)return res;
+      return crypto.subtle.importKey('raw',k.bytes,c.alg,false,['decrypt']).then(function(key){
+        usable++;
+        var ivs=ivCandidates(k,raw),body=cbc?raw:raw.slice(c.iv);
+        triedIv+=ivs.length;
+        return ivs.reduce(function(ch2,iv){
+          return ch2.then(function(r2){
+            if(r2)return r2;
+            return crypto.subtle.decrypt(params(iv.bytes,aad),key,body).then(function(buf){return {buf:new Uint8Array(buf),k:k,iv:iv}},function(){return null});
+          });
+        },Promise.resolve(null));
+      },function(){return null});
+    });
+  },Promise.resolve(null)).then(function(res){
+    if(!res){
+      if(!usable)throw new Error(NO192);
+      if(cbc&&!triedIv)throw new Error(KEY_IV_RULE);
+      if(cbc)throw new Error('Decryption failed (Java: BadPaddingException). The key may be wrong, or this data was not encrypted with the key as its IV, or it is incomplete or changed.');
+      throw new Error(aad
+        ?'Decryption failed. Check the key and the AAD, and that the whole cipher was pasted. The data may also have been changed.'
+        :'Decryption failed. The key may be wrong, the data may be incomplete or changed, or it was encrypted with an AAD. If it was, open AAD and enter it.');
+    }
+    var text,label,chips=[{t:'AES-'+res.k.bytes.length*8+'-'+algo},{t:'Key read as '+res.k.name},{t:res.buf.length+' bytes decrypted'}];
+    if(cbc){chips.push({t:'IV: the key'});chips.push({t:'No integrity check, so make sure the text looks right',warn:true})}
+    try{text=new TextDecoder('utf-8',{fatal:true}).decode(res.buf);label='Decrypted text';try{JSON.parse(text);label='JSON'}catch(e){}}
+    catch(e){text=toB64(res.buf);label='Decrypted data (binary, shown as Base64)'}
+    setResult({text:text,label:label,chips:chips});
+  });
+}
+function run(){
+  var go=$('go'),gt=$('goT'),idle=mode==='E'?'Encrypt':'Decrypt';
+  if(go.disabled)return;
+  go.disabled=true;gt.textContent='Working\u2026';
+  var p;try{p=mode==='E'?encrypt():decrypt()}catch(e){p=Promise.reject(e)}
+  p.catch(function(e){fail(e&&e.message?e.message:'Something went wrong.')}).then(function(){go.disabled=false;gt.textContent=idle});
+}
+
+/* ---------- views (algorithm + mode) ---------- */
+function layText(){
+  var G=algo==='GCM',stored=G;
+  $('bIv').hidden=!stored;$('sIv').hidden=!stored;$('rIv').hidden=!stored;
+  $('bTag').hidden=!G;$('sTag').hidden=!G;$('rTag').hidden=!G;
+  $('sIv').textContent=G?'12 bytes':'16 bytes';
+  $('sCt').textContent=G?'same size as your data':'your data plus padding';
+  $('rIvS').textContent=G?'12 bytes. 16 Base64 characters or 24 hex characters.':'16 bytes. 24 Base64 characters or 32 hex characters.';
+  $('rCtS').textContent=G?'Same length as the original data.':'A multiple of 16 bytes.';
+  $('rCtP').textContent=G?'Your data, encrypted.':'Your data plus 1 to 16 bytes of padding (PKCS#7), encrypted in 16-byte blocks.';
+  $('rLit').textContent=G?'Total size = 12 + data size + 16 bytes, so encryption adds 28 bytes.':(stored?'Total size = 16 + data size rounded up to the next multiple of 16. There is no tag, so AES-CBC does not detect changed data.':'Total size = data size rounded up to the next multiple of 16. The IV is not stored in the data: it comes from the key or from the IV you entered. There is no tag, so AES-CBC does not detect changed data.');
+}
+function setView(a,m){
+  var old=RK();store[old]=store[old]||{};
+  FIELDS.forEach(function(f){store[old][f]=$(f).value});
+  algo=a;mode=m;
+  document.documentElement.dataset.algo=a==='GCM'?'gcm':'cbc';setFavicon();
+  var k=RK();store[k]=store[k]||{};
+  FIELDS.forEach(function(f){$(f).value=store[k][f]||''});
+  var E=m==='E',G=a==='GCM';
+  $('aGCM').setAttribute('aria-selected',G);$('aCBC').setAttribute('aria-selected',!G);
+  $('aGCM').tabIndex=G?0:-1;$('aCBC').tabIndex=G?-1:0;$('tE').tabIndex=E?0:-1;$('tD').tabIndex=E?-1:0;
+  $('tE').setAttribute('aria-selected',E);$('tD').setAttribute('aria-selected',!E);
+  $('tabs').setAttribute('data-pos',E?'0':'1');
+  $('dl').textContent=E?'Text to encrypt':'Encrypted data';
+  $('data').placeholder=E?'Type or paste the text to encrypt':'Paste the encrypted data (Base64)';
+  $('goT').textContent=E?'Encrypt':'Decrypt';
+  $('goI').innerHTML=E?ICON.lock:ICON.unlock;
+  $('fIcon').innerHTML=E?ICON.lock:ICON.unlock;
+  $('fVerb').textContent=E?'Encrypt':'Decrypt';
+  $('fSub').textContent=E?'Turn text into AES-'+a+' encrypted data.':'Turn AES-'+a+' encrypted data back into text.';
+  $('rSub').textContent=E?'Encrypted data and its structure appear here.':'Decrypted text and details appear here.';
+  $('keyline').hidden=!E;
+  $('phT').textContent=E?'Your encrypted data will appear here':'Your decrypted text will appear here';
+  $('phS').textContent=E?'Enter the text and a key, then choose Encrypt.':'Paste the encrypted data and the key, then choose Decrypt.';
+  $('gen').hidden=!E;
+  $('lay').hidden=!E;
+  $('aadD').hidden=!G;
+  ivUI();
+  $('go').setAttribute('data-kbd',(/Mac|iPhone|iPad/.test(navigator.platform||'')?'\u2318':'Ctrl')+' \u21b5');
+  aadBadge(true);if(!$('aad').value)$('aadD').open=false;
+  setEye();keyHint();dataHint();
+  render(resStore[k]||null);
+}
+$('tE').onclick=function(){if(mode!=='E')setView(algo,'E')};
+$('tD').onclick=function(){if(mode!=='D')setView(algo,'D')};
+function tabKeys(ids){
+  ids.forEach(function(id,i){
+    $(id).addEventListener('keydown',function(e){
+      var k=e.key,n=-1;
+      if(k==='ArrowRight'||k==='ArrowDown')n=(i+1)%ids.length;
+      else if(k==='ArrowLeft'||k==='ArrowUp')n=(i-1+ids.length)%ids.length;
+      else if(k==='Home')n=0;else if(k==='End')n=ids.length-1;else return;
+      e.preventDefault();$(ids[n]).click();$(ids[n]).focus();
+    });
+  });
+}
+tabKeys(['aGCM','aCBC']);tabKeys(['tE','tD']);
+$('aGCM').onclick=function(){if(algo!=='GCM')setView('GCM',mode)};
+$('aCBC').onclick=function(){if(algo!=='CBC')setView('CBC',mode)};
+
+/* ---------- events ---------- */
+$('go').onclick=run;
+document.addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();run()}});
+$('aad').addEventListener('input',function(){aadBadge(false)});
+$('key').addEventListener('input',function(){keyHint();ivHint()});
+$('data').addEventListener('input',dataHint);
+$('tsnow').onclick=function(){$('aad').value=nowTs();aadBadge(true);toast('Current time set as AAD')};
+$('showk').onclick=function(){var k=$('key');k.type=k.type==='password'?'text':'password';setEye()};
+$('gen').onclick=function(){
+  $('key').value=toB64(crypto.getRandomValues(new Uint8Array(32)));
+  $('key').type='text';setEye();
+  keyHint();toast('New 256-bit key created. Save it somewhere safe.');
+};
+$('clr').onclick=function(){FIELDS.forEach(function(f){$(f).value=''});ivUI();keyHint();dataHint();aadBadge(false);$('aadD').open=false;resStore[RK()]=null;render(null)};
+$('copyIn').onclick=function(e){e.stopPropagation();copyOut()};
+$('out').onclick=function(){var s=window.getSelection&&window.getSelection().toString();if(!s)copyOut()};
+$('layMore').onclick=function(){var on=$('liMore').hidden;$('liMore').hidden=!on;$('layMore').textContent=on?'Hide details':'Show details';$('layMore').setAttribute('aria-expanded',on)};
+
+$('themeBtn').onclick=function(){
+  var next=effTheme()==='dark'?'light':'dark';
+  document.documentElement.dataset.theme=next;
+  try{localStorage.setItem('aes-theme',next)}catch(e){}
+  themeIcon();
+};
+
+/* ---------- start ---------- */
+if(!(window.crypto&&crypto.subtle)){$('fatal').hidden=false;$('go').disabled=true}
+themeIcon();
+setView('GCM','D');
+})();
+</script>
+</body>
+</html>

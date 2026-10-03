@@ -1,0 +1,15 @@
+const {JSDOM}=require('jsdom');const fs=require('fs');const nc=require('crypto');
+const path=require('path');
+const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+const dom=new JSDOM(html,{runScripts:'dangerously',pretendToBeVisual:true,beforeParse(w){Object.defineProperty(w,'crypto',{value:nc.webcrypto});w.TextEncoder=TextEncoder;w.TextDecoder=TextDecoder;w.Uint8Array=Uint8Array;w.scrollTo=()=>{};w.Element.prototype.scrollIntoView=()=>{};w.matchMedia=()=>({matches:true})}});
+const d=dom.window.document,$=id=>d.getElementById(id);let p=0,f=0;const ok=(c,m)=>{c?p++:f++;console.log((c?'PASS ':'FAIL ')+m)};
+ok(d.documentElement.dataset.algo==='gcm','starts with the GCM (blue) palette');
+$('aCBC').click();ok(d.documentElement.dataset.algo==='cbc','selecting AES-CBC switches to the CBC (violet) palette');
+const fav=()=>decodeURIComponent(d.querySelector('link[rel=icon]').href);
+ok(/6d28d9/.test(fav()),'favicon turns violet for CBC');
+$('themeBtn').click();ok(d.documentElement.dataset.theme==='light'&&d.documentElement.dataset.algo==='cbc','theme and algorithm palettes are independent');
+$('aGCM').click();ok(d.documentElement.dataset.algo==='gcm'&&/1559d6/.test(fav()),'back to GCM: blue palette and blue favicon');
+const css=html.split('</style>')[0];
+ok(/:root\[data-algo="cbc"\]\{/.test(css)&&/:root\[data-theme="dark"\]\[data-algo="cbc"\]\{/.test(css),'CBC palette defined for both light and dark');
+ok(!/rgba\((21,\s*89,\s*214|47,\s*128,\s*237)/.test(css),'no hard-coded blue left in the styles');
+console.log(`\n${p} passed, ${f} failed`);process.exit(f?1:0);
