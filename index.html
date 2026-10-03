@@ -690,7 +690,7 @@ function setView(a,m){
   $('phT').textContent=E?'Your encrypted data will appear here':'Your decrypted text will appear here';
   $('phS').textContent=E?'Enter the text and a key, then choose Encrypt.':'Paste the encrypted data and the key, then choose Decrypt.';
   $('gen').hidden=!E;
-  $('lay').hidden=!E;
+  $('lay').hidden=!(E&&G);
   $('aadD').hidden=!G;
   ivUI();
   $('go').setAttribute('data-kbd',(/Mac|iPhone|iPad/.test(navigator.platform||'')?'\u2318':'Ctrl')+' \u21b5');

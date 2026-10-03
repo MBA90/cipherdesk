@@ -32,7 +32,7 @@ const javaEncrypt=(secretB64,text)=>{const key=Buffer.from(secretB64,'base64');c
   ok(!d.getElementById('ivbox')&&!/Same as the key \(Java style\)/.test(d.body.textContent),'the IV info row is gone from the page');
   ok(!d.querySelector('select')&&!d.getElementById('ivSeg')&&!d.getElementById('ivCustom'),'no dropdown and no other IV options exist');
   ok($('aadD').hidden,'AAD is hidden in AES-CBC');
-  ok($('bTag').hidden&&$('bIv').hidden&&/key as the IV|not stored/.test($('rLit').textContent),'layout panel: no IV segment, no tag');
+  $('tE').click();ok($('lay').hidden,'the Data layout section is hidden in AES-CBC (Encrypt)');
   // ---- encrypt equals Java ----
   const plain='{\n  "id" : 100001,\n  "name" : "\u0645\u062d\u0645\u062f"\n}';
   const e1=await enc(SECRET,plain);const ref=javaEncrypt(SECRET,plain);
@@ -78,9 +78,9 @@ const javaEncrypt=(secretB64,text)=>{const key=Buffer.from(secretB64,'base64');c
     const r2=await dec(SECRET,Buffer.alloc(20,3).toString('base64'));ok(r2.err&&/IllegalBlockSizeException/.test(r2.out),'bad data length reports IllegalBlockSizeException');
     const r3=await dec(SECRET,'');ok(r3.err,'empty data gives an error'); }
   // ---- separate state per algorithm, GCM unaffected ----
-  $('tE').click();$('data').value='cbc text';$('aGCM').click();ok($('data').value!=='cbc text'&&!$('aadD').hidden,'GCM keeps its own inputs; AAD is back');
+  $('tE').click();$('data').value='cbc text';$('aGCM').click();ok($('data').value!=='cbc text'&&!$('aadD').hidden&&!$('lay').hidden,'GCM keeps its own inputs; AAD and the Data layout section are back');
   { const g=await enc(SECRET,'gcm again');const gb=await dec(SECRET,g.out);ok(!g.err&&gb.out==='gcm again'&&Buffer.from(g.out,'base64').length===12+9+16,'AES-GCM still works (12-byte IV + data + 16-byte tag)'); }
-  $('aCBC').click();ok($('aadD').hidden,'AAD is hidden again after returning to AES-CBC');
+  $('aCBC').click();ok($('aadD').hidden&&$('lay').hidden,'AAD and the Data layout section are hidden again in AES-CBC');
   // ---- Safari-like browser without AES-192 ----
   { const s=make({no192:true});const $$=id=>s.d.getElementById(id);$$('aCBC').click();$$('tE').click();$$('data').value='x';$$('key').value='abcdefghijklmnopqrstuvwx';$$('go').click();await wait(250);
     ok($$('out').classList.contains('err'),'24-byte key in AES-CBC gives a clear error'); }
