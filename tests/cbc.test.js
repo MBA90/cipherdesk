@@ -69,7 +69,7 @@ const javaEncrypt=(secretB64,text)=>{const key=Buffer.from(secretB64,'base64');c
   { $('tE').click();$('key').value='';$('gen').click();const gk=$('key').value;const gb=Buffer.from(gk,'base64');
     ok(gb.length===16&&$('keyHint').classList.contains('ok')&&/AES-128/.test($('keyHint').textContent),'AES-CBC: "Generate a key" makes a 16-byte key that is accepted');
     const m=await enc(gk,'generated key test');const b=await dec(gk,m.out);ok(!m.err&&b.out==='generated key test','a generated key encrypts and decrypts');
-    $('aGCM').click();$('key').value='';$('gen').click();ok(Buffer.from($('key').value,'base64').length===32,'AES-GCM: "Generate a key" still makes a 32-byte key');$('aCBC').click(); }
+    $('aGCM').click();$('key').value='';$('gen').click();{const gk2=Buffer.from($('key').value,'base64');ok(gk2.length===16&&/AES-128 key/.test($('keyHint').textContent),'AES-GCM: "Generate a key" also makes a 16-byte (AES-128) key');const g=await enc($('key').value,'gcm generated');const gb=await dec($('key').value,g.out);ok(!g.err&&gb.out==='gcm generated','a generated AES-128 key works for AES-GCM');}$('aCBC').click(); }
   // ---- keys that cannot be the IV ----
   { const k32=Buffer.from('0123456789abcdef0123456789abcdef').toString('base64');
     const c32=await enc(k32,'x');ok(c32.err&&/16 bytes/.test(c32.out),'32-byte key: clear message that AES-CBC needs a 16-byte key');

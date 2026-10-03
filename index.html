@@ -722,7 +722,7 @@ $('data').addEventListener('input',dataHint);
 $('tsnow').onclick=function(){$('aad').value=nowTs();aadBadge(true);toast('Current time set as AAD')};
 $('showk').onclick=function(){var k=$('key');k.type=k.type==='password'?'text':'password';setEye()};
 $('gen').onclick=function(){
-  var n=algo==='CBC'?16:32;
+  var n=16;
   $('key').value=toB64(crypto.getRandomValues(new Uint8Array(n)));
   $('key').type='text';setEye();
   keyHint();toast('New '+n*8+'-bit key created. Save it somewhere safe.');

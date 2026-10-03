@@ -79,7 +79,7 @@ const ok=(c,m)=>{c?pass++:fail++;console.log((c?'PASS ':'FAIL ')+m)};
   $('clr').click();ok($('res').classList.contains('empty')&&$('data').value===''&&$('key').value==='','Clear all clears inputs and result (this tab)');
   $('tE').click();ok(!$('res').classList.contains('empty'),'Clear does not touch other tab');
   // generate key
-  $('gen').click();ok($('key').value.length===44&&$('key').type==='text','Generate key creates 256-bit Base64');
+  $('gen').click();ok($('key').value.length===24&&Buffer.from($('key').value,'base64').length===16&&$('key').type==='text','Generate key creates a 128-bit (16-byte) Base64 key');
   // AAD UI
   $('clr').click();$('tsnow').click();ok(/^\d{10}$/.test($('aad').value)&&$('aadD').open&&$('aadBadge').classList.contains('on'),'Use current time sets Unix seconds, opens AAD');
   // layout panel
