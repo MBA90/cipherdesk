@@ -1,4 +1,4 @@
-// AES-CBC: the IV is always the key (Java: IvParameterSpec(key)). Synthetic data only.
+// AES-CBC: the IV is the 16-byte key, nothing extra is stored in the data. Synthetic data only.
 const {JSDOM}=require('jsdom');const fs=require('fs');const nc=require('crypto');const path=require('path');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
 function make(opts={}){
@@ -14,9 +14,9 @@ function make(opts={}){
 }
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 let pass=0,fail=0;const ok=(c,m)=>{c?pass++:fail++;console.log((c?'PASS ':'FAIL ')+m)};
-// reference = the Java code step by step
-const javaEncrypt=(secretB64,text)=>{const key=Buffer.from(secretB64,'base64');const iv=Buffer.from(key.toString('utf8'),'utf8');
-  if(iv.length!==16)throw new Error('Wrong IV length: must be 16 bytes long');
+// reference: Node's own AES-128-CBC with IV = key
+const javaEncrypt=(secretB64,text)=>{const key=Buffer.from(secretB64,'base64');const iv=key;
+  if(key.length!==16)throw new Error('key must be 16 bytes');
   const c=nc.createCipheriv('aes-'+key.length*8+'-cbc',key,iv);return Buffer.concat([c.update(text,'utf8'),c.final()]).toString('base64')};
 (async()=>{
   const {w,d,errs}=make();const $=id=>d.getElementById(id);
@@ -29,20 +29,20 @@ const javaEncrypt=(secretB64,text)=>{const key=Buffer.from(secretB64,'base64');c
   ok($('aGCM').getAttribute('aria-selected')==='true','starts on AES-GCM');
   $('aCBC').click();
   ok($('aCBC').getAttribute('aria-selected')==='true','AES-CBC tab selected');
-  ok(!d.getElementById('ivbox')&&!/Same as the key \(Java style\)/.test(d.body.textContent),'the IV info row is gone from the page');
+  ok(!d.getElementById('ivbox')&&!/\bJava\b/.test(d.body.textContent),'no IV info row and no Java wording on the page');
   ok(!d.querySelector('select')&&!d.getElementById('ivSeg')&&!d.getElementById('ivCustom'),'no dropdown and no other IV options exist');
   ok($('aadD').hidden,'AAD is hidden in AES-CBC');
   $('tE').click();ok($('lay').hidden,'the Data layout section is hidden in AES-CBC (Encrypt)');
   // ---- encrypt equals Java ----
   const plain='{\n  "id" : 100001,\n  "name" : "\u0645\u062d\u0645\u062f"\n}';
   const e1=await enc(SECRET,plain);const ref=javaEncrypt(SECRET,plain);
-  ok(!e1.err&&e1.out===ref,'encrypt output is identical to the Java reference');
+  ok(!e1.err&&e1.out===ref,'encrypt output is identical to the reference (AES-128-CBC, IV = key)');
   ok(Buffer.from(e1.out,'base64').length%16===0&&/not stored in the data \(taken from the key\)/.test($('inspTxt').textContent)&&/Integrity: none/.test($('inspTxt').textContent),'no IV prefix; inspect explains the IV and the missing integrity check');
   ok(/IV not included/.test($('live').textContent),'live size line says IV not included');
   // ---- Node interop (iv = key) ----
   const key=Buffer.from('sample-key-12345');
   const dc=nc.createDecipheriv('aes-128-cbc',key,key);ok(Buffer.concat([dc.update(Buffer.from(e1.out,'base64')),dc.final()]).toString('utf8')===plain,"Node's AES-128-CBC (iv = key) decrypts the tool's output");
-  const d1=await dec(SECRET,ref);ok(!d1.err&&d1.out===plain,'decrypts Java-style data completely (first block included)');
+  const d1=await dec(SECRET,ref);ok(!d1.err&&d1.out===plain,'decrypts reference data completely (first block included)');
   ok(/AES-128-CBC/.test($('meta').textContent)&&!/IV: the key/.test($('meta').textContent)&&/no integrity check/i.test($('meta').textContent),'result chips: AES-128-CBC and the integrity warning, without the IV chip');
   // cipher given as hex, with line breaks, key with trailing newline
   const hexc=Buffer.from(ref,'base64').toString('hex');
@@ -50,7 +50,7 @@ const javaEncrypt=(secretB64,text)=>{const key=Buffer.from(secretB64,'base64');c
   ok((await dec(SECRET+'\n',ref.replace(/(.{40})/g,'$1\n '))).out===plain,'cipher with line breaks and key with a trailing newline');
   // key given as hex / plain text also work
   ok((await dec(key.toString('hex'),ref)).out===plain&&(await dec('sample-key-12345',ref)).out===plain,'key as hex or plain text');
-  // ---- random Java-style secrets and texts ----
+  // ---- random secrets and texts ----
   const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=<>?';
   const texts=['hello','{"id":100001,"name":"Test User"}','\u0645\u0631\u062d\u0628\u0627 \u0628\u0627\u0644\u0639\u0627\u0644\u0645','emoji \ud83d\ude80 and \u00e9\u00e8',nc.randomBytes(40).toString('base64'),'x'.repeat(16),'y'.repeat(32),'z'.repeat(1000)];
   let same=0,back=0,N=24;
@@ -60,22 +60,25 @@ const javaEncrypt=(secretB64,text)=>{const key=Buffer.from(secretB64,'base64');c
     const b=await dec(sec,r);if(!b.err&&b.out===text)back++;}
   ok(same===N,'encrypt: '+same+'/'+N+' random secrets and texts match the Java reference');
   ok(back===N,'decrypt: '+back+'/'+N+' Java-reference ciphers decrypt to the exact text');
-  // ---- valid multi-byte UTF-8 key (16 bytes) ----
-  { const mb=Buffer.from('abcd\u00e9fghijklm12','utf8');ok(mb.length===16,'(multi-byte key is 16 bytes)');
-    const sec=mb.toString('base64');const m=await enc(sec,'multi-byte');ok(!m.err&&m.out===javaEncrypt(sec,'multi-byte'),'valid multi-byte UTF-8 key matches Java'); }
-  // ---- keys Java rejects ----
-  { const bad=Buffer.alloc(16,0xff).toString('base64');let jf=false;try{javaEncrypt(bad,'x')}catch(e){jf=/Wrong IV length/.test(e.message)}
-    const a=await enc(bad,'x'),b=await dec(bad,Buffer.alloc(32,1).toString('base64'));
-    ok(jf&&a.err&&/valid UTF-8/.test(a.out)&&/Java would fail/.test(a.out),'16 bytes that are not valid UTF-8: Java fails and the tool explains (encrypt)');
-    ok(b.err&&/valid UTF-8/.test(b.out),'same explanation on decrypt');
-    $('tE').click();$('key').value=bad;$('key').dispatchEvent(new w.Event('input'));ok(/valid UTF-8/.test($('keyHint').textContent)&&$('keyHint').classList.contains('bad'),'key hint turns red: key must be valid UTF-8 text');
-    const k32=Buffer.from('0123456789abcdef0123456789abcdef').toString('base64');let j2=false;try{javaEncrypt(k32,'x')}catch(e){j2=true}
-    const c32=await enc(k32,'x');ok(j2&&c32.err&&/16 bytes/.test(c32.out),'32-byte key: Java fails, the tool explains');
+  // ---- any random 16-byte key works (it does not have to be text) ----
+  { let okc=0,M=20;for(let i=0;i<M;i++){const sec=nc.randomBytes(16).toString('base64'),text=texts[i%texts.length];
+      const m=await enc(sec,text),r=javaEncrypt(sec,text);const b=await dec(sec,r);if(!m.err&&m.out===r&&!b.err&&b.out===text)okc++;}
+    ok(okc===M,'random raw-byte keys (not valid text): '+okc+'/'+M+' encrypt and decrypt like the reference');
+    const bad=Buffer.alloc(16,0xff).toString('base64');const a=await enc(bad,'x');ok(!a.err&&a.out===javaEncrypt(bad,'x'),'a key made of 0xFF bytes works too'); }
+  // ---- Generate a key ----
+  { $('tE').click();$('key').value='';$('gen').click();const gk=$('key').value;const gb=Buffer.from(gk,'base64');
+    ok(gb.length===16&&$('keyHint').classList.contains('ok')&&/AES-128/.test($('keyHint').textContent),'AES-CBC: "Generate a key" makes a 16-byte key that is accepted');
+    const m=await enc(gk,'generated key test');const b=await dec(gk,m.out);ok(!m.err&&b.out==='generated key test','a generated key encrypts and decrypts');
+    $('aGCM').click();$('key').value='';$('gen').click();ok(Buffer.from($('key').value,'base64').length===32,'AES-GCM: "Generate a key" still makes a 32-byte key');$('aCBC').click(); }
+  // ---- keys that cannot be the IV ----
+  { const k32=Buffer.from('0123456789abcdef0123456789abcdef').toString('base64');
+    const c32=await enc(k32,'x');ok(c32.err&&/16 bytes/.test(c32.out),'32-byte key: clear message that AES-CBC needs a 16-byte key');
+    const d32=await dec(k32,Buffer.alloc(32,1).toString('base64'));ok(d32.err&&/16 bytes/.test(d32.out),'same message on decrypt');
+    $('tE').click();$('key').value=k32;$('key').dispatchEvent(new w.Event('input'));ok(/16-byte key/.test($('keyHint').textContent)&&$('keyHint').classList.contains('bad'),'key hint turns red for a 32-byte key');
     $('key').value=SECRET;$('key').dispatchEvent(new w.Event('input'));ok($('keyHint').classList.contains('ok')&&/AES-128 key/.test($('keyHint').textContent),'key hint is green for a good key'); }
-  { const k32b=Buffer.from('0123456789abcdef0123456789abcdef').toString('base64');$('key').value=k32b;$('key').dispatchEvent(new w.Event('input'));ok(/16-byte key/.test($('keyHint').textContent)&&$('keyHint').classList.contains('bad'),'key hint says AES-CBC needs a 16-byte key for a 32-byte key');$('key').value=SECRET;$('key').dispatchEvent(new w.Event('input')); }
-  // ---- Java-style exception wording ----
-  { const other=Buffer.from('fedcba9876543210').toString('base64');const r=await dec(other,ref);ok(r.err&&/BadPaddingException/.test(r.out),'wrong key reports BadPaddingException');
-    const r2=await dec(SECRET,Buffer.alloc(20,3).toString('base64'));ok(r2.err&&/IllegalBlockSizeException/.test(r2.out),'bad data length reports IllegalBlockSizeException');
+  // ---- error wording ----
+  { const other=Buffer.from('fedcba9876543210').toString('base64');const r=await dec(other,ref);ok(r.err&&/Decryption failed/.test(r.out)&&!/\bJava\b/.test(r.out),'wrong key gives a clear decryption error');
+    const r2=await dec(SECRET,Buffer.alloc(20,3).toString('base64'));ok(r2.err&&/multiple of 16/.test(r2.out)&&!/\bJava\b/.test(r2.out),'bad data length explains the multiple-of-16 rule');
     const r3=await dec(SECRET,'');ok(r3.err,'empty data gives an error'); }
   // ---- separate state per algorithm, GCM unaffected ----
   $('tE').click();$('data').value='cbc text';$('aGCM').click();ok($('data').value!=='cbc text'&&!$('aadD').hidden&&!$('lay').hidden,'GCM keeps its own inputs; AAD and the Data layout section are back');

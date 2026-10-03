@@ -438,16 +438,15 @@ function importKey(cands,usage){
 }
 var NO192='This browser does not support AES-192 keys. Use a 16 or 32 byte key.';
 
-/* ---------- IV (AES-CBC): always the key, like Java's IvParameterSpec(key) ---------- */
+/* ---------- IV (AES-CBC): the IV is the key (16 bytes), so nothing extra is stored in the data ---------- */
 function ivSrc(){return algo==='CBC'?'key':'first'}
-/* Java: new IvParameterSpec(new String(keyBytes, UTF_8).getBytes(UTF_8)). Lossless for valid UTF-8, otherwise the bytes change and the length is no longer 16. */
-function javaIv(keyBytes){return utf8.encode(new TextDecoder('utf-8').decode(keyBytes))}
-var KEY_IV_RULE="AES-CBC here uses the key as the IV (like Java's IvParameterSpec(key)), so the key must be 16 bytes of valid UTF-8 text.";
+var KEY_IV_RULE='AES-CBC here uses the key as the IV, so the key must be exactly 16 bytes (AES-128). Use "Generate a key" to create one.';
+function cbcKeys(cands){return cands.filter(function(k){return k.bytes.length===16})}
 function ivUI(){layText();dataHint()}
 /* IV candidates for one key (decrypt) */
 function ivCandidates(k,raw){
   if(algo!=='CBC')return [{name:'the first '+C().iv+' bytes of the data',bytes:raw.slice(0,C().iv)}];
-  var jv=javaIv(k.bytes);return jv.length===16?[{name:'the key',bytes:jv}]:[];
+  return k.bytes.length===16?[{name:'the key',bytes:k.bytes}]:[];
 }
 
 /* ---------- inspect report ---------- */
@@ -519,13 +518,12 @@ function keyHint(){
   var v=$('key').value,h=$('keyHint');
   if(!v){h.textContent='';h.className='kh';return}
   try{
-    var kc=keyCandidates(v),c=kc[0];
+    var kc=keyCandidates(v);
     if(algo==='CBC'){
-      var good=kc.filter(function(k){return javaIv(k.bytes).length===16})[0];
-      if(!good){h.textContent=kc.some(function(k){return k.bytes.length===16})?'Key must be valid UTF-8 text':'AES-CBC needs a 16-byte key';h.className='kh bad';return}
-      c=good;
+      kc=cbcKeys(kc);
+      if(!kc.length){h.textContent='AES-CBC needs a 16-byte key';h.className='kh bad';return}
     }
-    h.textContent='AES-'+c.bytes.length*8+' key, read as '+c.name;h.className='kh ok';
+    var c=kc[0];h.textContent='AES-'+c.bytes.length*8+' key, read as '+c.name;h.className='kh ok';
   }catch(e){h.textContent='Needs 16 or 32 bytes';h.className='kh bad'}
 }
 function dataHint(){
@@ -593,13 +591,12 @@ function encrypt(){
   var data=$('data').value;
   if(!data)return Promise.reject(new Error('Enter the text to encrypt.'));
   var c=C(),cands=keyCandidates($('key').value),aad=algo==='GCM'?$('aad').value:'',cbc=algo==='CBC';
+  if(cbc){cands=cbcKeys(cands);if(!cands.length)return Promise.reject(new Error(KEY_IV_RULE))}
   return importKey(cands,'encrypt').then(function(f){
     if(!f)throw new Error(NO192);
     var iv,ivInfo=null;
     if(cbc){
-      iv=javaIv(f.k.bytes);
-      if(iv.length!==16)throw new Error(KEY_IV_RULE+' Your key gives an IV of '+iv.length+' bytes, and Java would fail here too (Wrong IV length: must be 16 bytes long).');
-      ivInfo={stored:false,src:'the key',iv:iv};
+      iv=f.k.bytes;ivInfo={stored:false,src:'the key',iv:iv};
     }else{iv=crypto.getRandomValues(new Uint8Array(c.iv))}
     return crypto.subtle.encrypt(params(iv,aad),f.key,utf8.encode(data)).then(function(buf){
       var body=new Uint8Array(buf),combined=cbc?body:cat(iv,body),ctLen=cbc?combined.length:combined.length-c.iv-c.tag;
@@ -612,8 +609,9 @@ function encrypt(){
 function decrypt(){
   var c=C(),raw=parseCipher($('data').value),cbc=algo==='CBC';
   if(!cbc&&raw.length<c.min)return Promise.reject(new Error('The data is too short to be AES-GCM output. It needs at least '+c.min+' bytes, and this has '+raw.length+'.'));
-  if(cbc&&(raw.length<16||raw.length%16!==0))return Promise.reject(new Error('This is not valid AES-CBC data. Its length must be a multiple of 16 bytes (Java: IllegalBlockSizeException), and this has '+raw.length+' bytes. Check that all of it was pasted.'));
+  if(cbc&&(raw.length<16||raw.length%16!==0))return Promise.reject(new Error('This is not valid AES-CBC data. Its length must be a multiple of 16 bytes and this has '+raw.length+' bytes. Check that all of it was pasted.'));
   var cands=keyCandidates($('key').value),aad=cbc?'':$('aad').value;
+  if(cbc){cands=cbcKeys(cands);if(!cands.length)return Promise.reject(new Error(KEY_IV_RULE))}
   var usable=0,triedIv=0;
   return cands.reduce(function(chain,k){
     return chain.then(function(res){
@@ -634,7 +632,7 @@ function decrypt(){
     if(!res){
       if(!usable)throw new Error(NO192);
       if(cbc&&!triedIv)throw new Error(KEY_IV_RULE);
-      if(cbc)throw new Error('Decryption failed (Java: BadPaddingException). The key may be wrong, or this data was not encrypted with the key as its IV, or it is incomplete or changed.');
+      if(cbc)throw new Error('Decryption failed. The key may be wrong, or this data was not encrypted with this key (the key is also the IV), or it is incomplete or changed.');
       throw new Error(aad
         ?'Decryption failed. Check the key and the AAD, and that the whole cipher was pasted. The data may also have been changed.'
         :'Decryption failed. The key may be wrong, the data may be incomplete or changed, or it was encrypted with an AAD. If it was, open AAD and enter it.');
@@ -724,9 +722,10 @@ $('data').addEventListener('input',dataHint);
 $('tsnow').onclick=function(){$('aad').value=nowTs();aadBadge(true);toast('Current time set as AAD')};
 $('showk').onclick=function(){var k=$('key');k.type=k.type==='password'?'text':'password';setEye()};
 $('gen').onclick=function(){
-  $('key').value=toB64(crypto.getRandomValues(new Uint8Array(32)));
+  var n=algo==='CBC'?16:32;
+  $('key').value=toB64(crypto.getRandomValues(new Uint8Array(n)));
   $('key').type='text';setEye();
-  keyHint();toast('New 256-bit key created. Save it somewhere safe.');
+  keyHint();toast('New '+n*8+'-bit key created. Save it somewhere safe.');
 };
 $('clr').onclick=function(){FIELDS.forEach(function(f){$(f).value=''});ivUI();keyHint();dataHint();aadBadge(false);$('aadD').open=false;resStore[RK()]=null;render(null)};
 $('copyIn').onclick=function(e){e.stopPropagation();copyOut()};

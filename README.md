@@ -37,7 +37,7 @@ Both modes produce one Base64 value:
 | AES-CBC | `ciphertext (PKCS#7)` only      | the key (16 bytes) | none     |
 
 - **AES-GCM:** the IV is random for every encryption, so the same text never encrypts to the same output twice.
-- **AES-CBC:** works exactly like Java's `AES/CBC/PKCS5Padding` with `new IvParameterSpec(new String(key, UTF_8).getBytes(UTF_8))`. The key is the Base64-decoded secret and **the IV is always the key**, so no IV is stored in the data. The key must be 16 bytes of valid UTF-8 text. The tool follows Java's errors too: a wrong IV length, `BadPaddingException` for a wrong key, `IllegalBlockSizeException` for a bad data length.
+- **AES-CBC:** the IV is the key, so the key must be 16 bytes (AES-128) and no IV is stored in the data. **Generate a key** creates a suitable random key. Because the IV comes from the key, the same text always encrypts to the same output with the same key. Prefer AES-GCM when you can.
 - AES-GCM also authenticates an optional **AAD** value. It is **not** stored in the data: you must supply the same AAD to decrypt.
 - AES-CBC does not detect wrong keys or changed data reliably. Prefer AES-GCM when you can.
 - Decryption accepts Base64 or hex input, and Base64 keys, hex keys and plain-text keys.
